@@ -887,6 +887,13 @@
          * the text constantly in a loop.
          */
         this.updateCurrentSongFile = function(youtubeVideo) {
+<<<<<<< HEAD
+            $.writeToFile(
+                youtubeVideo.getVideoTitle() + ' ',
+                baseFileOutputPath + 'currentsong.txt',
+                false
+            );
+=======
             var writer = new java.io.OutputStreamWriter(new java.io.FileOutputStream(baseFileOutputPath + 'currentsong.txt'), 'UTF-8');
 
             try {
@@ -896,6 +903,7 @@
             } finally {
                 writer.close();
             }
+>>>>>>> a7c385e58b04e9e4074f29311134021e5ae3367a
         };
 
         /**
@@ -1158,6 +1166,28 @@
         } else {
             refundUser = currentPlaylist.getCurrentVideo().getOwner().toLowerCase();
             retval = currentPlaylist.addToPlaylist(currentPlaylist.getCurrentVideo());
+<<<<<<< HEAD
+=======
+        }
+
+        if (stealRefund && retval != -2 && refundUser.length > 1) {
+            if (!$.isBot(refundUser) && !playlistDJname.equalsIgnoreCase(refundUser)) {
+                if ($.inidb.exists('pricecom', 'songrequest') || $.inidb.exists('pricecom', 'addsong')) {
+                    var isMod = $.isMod(refundUser);
+                    if ((((isMod && $.getIniDbBoolean('settings', 'pricecomMods', false) && !$.isBot(refundUser)) || !isMod))) {
+                        var refund = $.inidb.get('pricecom', 'songrequest');
+                        if (refund == 0) {
+                            refund = $.inidb.get('pricecom', 'addsong');
+                        }
+                        refund = parseInt(refund / 2);
+                        if (refund > 0) {
+                            $.inidb.incr('points', refundUser, parseInt(refund));
+                            $.say($.lang.get('ytplayer.command.stealsong.refund', $.username.resolve(refundUser), refund, (refund == 1 ? $.pointNameSingle : $.pointNameMultiple)));
+                        }
+                    }
+                }
+            }
+>>>>>>> a7c385e58b04e9e4074f29311134021e5ae3367a
         }
 
         if (stealRefund && retval != -2 && refundUser.length > 1) {
@@ -1178,6 +1208,22 @@
                 }
             }
         }
+    });
+
+    /**
+     * @event yTPlayerLoadPlaylist
+     */
+    $.bind('yTPlayerLoadPlaylist', function(event) {
+        currentPlaylist.loadNewPlaylist(event.getPlaylist());
+        loadPanelPlaylist();
+    });
+
+    /**
+     * @event ytPlayerDeleteCurrent
+     */
+    $.bind('yTPlayerDeleteCurrent', function(event) {
+        currentPlaylist.deleteCurrentVideo();
+        connectedPlayerClient.pushSongList();
     });
 
     /**
