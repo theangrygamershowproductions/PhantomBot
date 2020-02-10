@@ -42,7 +42,6 @@ Please refer to platform-specific installation documentation.
 ## Upgrading PhantomBot
 
 Detailed upgrade instructions are listed on our [documentation](https://community.phantom.bot/t/how-to-update-phantombot/56).
-<<<<<<< HEAD
 
 ## Phantombot Management
 
@@ -52,8 +51,6 @@ Links to bot command lists
 * [Admin Commands](admincommands.md "Admin Commands")
 * [Bot Commands](botcommands.md "Commands")
 * [Currency Commands](currencycommands.md "Currency Help")
-=======
->>>>>>> a7c385e58b04e9e4074f29311134021e5ae3367a
 
 ## License
 
