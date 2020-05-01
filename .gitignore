@@ -68,6 +68,15 @@ nbproject/
 .classpath
 .project
 
+#Visual Studio Code 
+.vs
+*.db
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.log
+
 # Libs downloaded from Maven
 lib/
 
