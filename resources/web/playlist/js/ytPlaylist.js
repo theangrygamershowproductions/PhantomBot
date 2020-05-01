@@ -24,7 +24,7 @@ var DEBUG_MODE = false;
 var connectedToWS = false;
 
 var url = window.location.host.split(":");
-var addr = (getProtocol() == 'https://' ? 'wss://' : 'ws://') + url[0] + ':' + getPlayerPort();
+var addr = (getProtocol() === 'https://' || window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + '/ws/ytplayer';
 var connection = new WebSocket(addr, []);
 var currentVolume = 0;
 
@@ -42,7 +42,7 @@ connection.onopen = function(data) {
     connectedToWS = true;
 
     var jsonObject = {};
-    jsonObject["readauth"] = getAuth();
+    jsonObject["authenticate"] = getAuth();
     connection.send(JSON.stringify(jsonObject));
     debugMsg("onPlayerReady::connection.send(" + JSON.stringify(jsonObject)+")");
 }
@@ -62,14 +62,14 @@ connection.onmessage = function(e) {
 
     debugMsg('connection.onmessage(' + e.data + ')');
 
-    if (messageObject['authresult'] === false) {
+    if (messageObject['authresult'] === 'false') {
         if (!messageObject['authresult']) {
             newAlert('WS Auth Failed', 'Reload page, if that fails, let the caster know', 'danger', 0);
             return;
         }
         return;
     }
-    if (messageObject['authresult'] === true) {
+    if (messageObject['authresult'] === 'true') {
         refreshData();
     }
 

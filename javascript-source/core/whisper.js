@@ -55,6 +55,9 @@
      * @returns {string}
      */
     function whisperPrefix(username, force) {
+        if (username.toLowerCase() == $.botName.toLowerCase()) {
+            return ''; 
+        }        
         if (whisperMode || force) {
             return '/w ' + username + ' ';
         }
@@ -85,7 +88,7 @@
             return;
         }
 
-        if (message.startsWith('!') && $.isMod(sender) && $.users.includes(sender)) {
+        if (message.startsWith('!') && $.isMod(sender) && $.userExists(sender)) {
             message = message.substring(1);
             if (message.includes(' ')) {
                 split = message.indexOf(' ');

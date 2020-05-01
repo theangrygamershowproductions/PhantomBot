@@ -16,12 +16,12 @@
  */
 
 (function() {
-    // Pre-build regular expressions.
+    // Pre-build regular expressions.z
     var reCustomAPI = new RegExp(/\(customapi\s([\w\-\.\_\~\:\/\?\#\[\]\@\!\$\&\'\(\)\*\+\,\;\=]+)\)/), // URL[1]
         reCustomAPIJson = new RegExp(/\(customapijson ([\w\.:\/\$=\?\&\-]+)\s([\w\W]+)\)/), // URL[1], JSONmatch[2..n]
         reCustomAPITextTag = new RegExp(/{([\w\W]+)}/),
         reCommandTag = new RegExp(/\(command\s([\w]+)\)/),
-        tagCheck = new RegExp(/\(help=|\(views\)|\(subscribers\)|\(age\)|\(sender\)|\(@sender\)|\(baresender\)|\(random\)|\(1\)|\(2\)|\(3\)|\(count\)|\(pointname\)|\(points\)|\(currenttime|\(price\)|\(#|\(uptime\)|\(follows\)|\(game\)|\(status\)|\(touser\)|\(echo\)|\(alert [,.\w]+\)|\(readfile|\(1=|\(countdown=|\(countup=|\(downtime\)|\(pay\)|\(onlineonly\)|\(offlineonly\)|\(code=|\(followage\)|\(followdate\)|\(hours\)|\(gameinfo\)|\(titleinfo\)|\(gameonly=|\(useronly=|\(playtime\)|\(gamesplayed\)|\(pointtouser\)|\(lasttip\)|\(writefile .+\)|\(readfilerand|\(team_|\(commandcostlist\)|\(playsound |\(customapi |\(customapijson /),
+        tagCheck = new RegExp(/\(help=|\(views\)|\(subscribers\)|\(age\)|\(sender\)|\(@sender\)|\(baresender\)|\(random\)|\(1\)|\(2\)|\(3\)|\(count\)|\(pointname\)|\(points\)|\(currenttime|\(price\)|\(#|\(uptime\)|\(follows\)|\(game\)|\(status\)|\(touser\)|\(echo\)|\(alert [,.\w]+\)|\(readfile|\(1=|\(countdown=|\(countup=|\(downtime\)|\(pay\)|\(onlineonly\)|\(offlineonly\)|\(code=|\(followage\)|\(followdate\)|\(hours\)|\(gameinfo\)|\(titleinfo\)|\(gameonly=|\(useronly=|\(playtime\)|\(gamesplayed\)|\(pointtouser\)|\(lasttip\)|\(writefile .+\)|\(readfilerand|\(team_|\(commandcostlist\)|\(playsound |\(repeat [1-9]\d*,[\w\s]+\)|\(customapi |\(customapijson /),
         customCommands = [],
         ScriptEventManager = Packages.tv.phantombot.script.ScriptEventManager,
         CommandEvent = Packages.tv.phantombot.event.command.CommandEvent;
@@ -441,6 +441,32 @@
             }
         }
 
+        if (message.match(/\(repeat\s[1-9]\d*,[\w\s]+\)/g)) {
+            var MIN_COUNTER_VALUE = 1;
+            var MAX_COUNTER_VALUE = 30;
+
+            var matches = message.match(/\(repeat\s([1-9]\d*),([\w\s]+)\)/);
+            var allMatch = matches[0];
+            var counter = parseInt(matches[1]);
+            var iteratingText = matches[2];
+
+            if (counter < MIN_COUNTER_VALUE) {
+                counter = MIN_COUNTER_VALUE;
+            }
+
+            if (counter > MAX_COUNTER_VALUE) {
+                counter = MAX_COUNTER_VALUE;
+            }
+
+            var tmpArray = [];
+
+            for(var i = 0; i < counter; i++) {
+                tmpArray.push(iteratingText);
+            }
+
+            message = $.replace(message, allMatch, tmpArray.join(' '));
+        }
+
         if (message.match(/\(age\)/g)) {
             $.getChannelAge(event);
             return null;
@@ -745,20 +771,42 @@
      * @param {sub} subcommand
      * @returns 0 = good, 1 = command perm bad, 2 = subcommand perm bad
      */
-    function permCom(username, command, subcommand) {
+    function permCom(username, command, subcommand, tags) {
+        var commandGroup, allowed;
         if (subcommand === '') {
-            if ($.getCommandGroup(command) >= $.getUserGroupId(username)) {
-                return 0;
-            } else {
-                return 1;
-            }
+            commandGroup = $.getCommandGroup(command);
         } else {
-            if ($.getSubcommandGroup(command, subcommand) >= $.getUserGroupId(username)) {
-                return 0;
-            } else {
-                return 2;
-            }
+            commandGroup = $.getSubcommandGroup(command, subcommand);
         }
+        
+        switch(commandGroup) {
+            case 0:
+                allowed = $.isCaster(username);
+                break;
+            case 1:
+                allowed = $.isAdmin(username);
+                break;
+            case 2:
+                allowed = $.isModv3(username, tags);
+                break;
+            case 3:
+                allowed = $.isSubv3(username, tags) || $.isModv3(username, tags);
+                break;
+            case 4:
+                allowed = $.isDonator(username) || $.isModv3(username, tags);
+                break;
+            case 5:
+                allowed = $.isVIP(username, tags) || $.isModv3(username, tags);
+                break;
+            case 6:
+                allowed = $.isReg(username) || $.isModv3(username, tags);
+                break;
+            default:
+                allowed = true;
+                break;
+        }
+        
+        return allowed ? 0 : (subcommand === '' ? 1 : 2);
     }
 
     /*
@@ -938,7 +986,11 @@
                 $.say($.whisperPrefix(sender) + $.lang.get('cmd.404', action));
                 return;
             } else if ($.commandExists(action) && !$.inidb.exists('command', action)) {
-                $.say($.whisperPrefix(sender) + $.lang.get('customcommands.edit.404'));
+                if ($.inidb.exists('aliases', action)) {
+                    $.say($.whisperPrefix(sender) + $.lang.get('customcommands.edit.editcom.alias', $.inidb.get('aliases', action), argsString));
+                } else {
+                    $.say($.whisperPrefix(sender) + $.lang.get('customcommands.edit.404'));
+                }
                 return;
             } else if ($.inidb.get('command', action).match(/\(adminonlyedit\)/) && !$.isAdmin(sender)) {
                 if ($.getIniDbBoolean('settings', 'permComMsgEnabled', true)) {
@@ -991,7 +1043,7 @@
                 $.say($.whisperPrefix(sender) + $.lang.get('customcommands.token.success', action));
             }
 
-            if (argsString.length() === 0) {
+            if (argsString.length === 0) {
                 $.inidb.RemoveKey('commandtoken', '', action);
             } else {
                 $.inidb.SetString('commandtoken', '', action, argsString);
@@ -1285,8 +1337,12 @@
             }
 
             for (idx in aliases) {
-                if (permCom(sender, $.inidb.get('aliases', aliases[idx]), '') === 0) {
-                    cmdList.push('!' + aliases[idx]);
+                var aliasCmd = $.inidb.get('aliases', aliases[idx]);
+
+                if (!$.inidb.exists('disabledCommands', aliasCmd)) {
+                    if (permCom(sender, aliasCmd, '') === 0) {
+                        cmdList.push('!' + aliases[idx]);
+                    }
                 }
             }
 
