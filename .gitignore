@@ -60,6 +60,16 @@ out/
 .idea
 *.iml
 
+# Visual Studio Build files
+.vs
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+.suo
+.db
+*.log
+
 # Netbeans Project files
 nbproject/
 
