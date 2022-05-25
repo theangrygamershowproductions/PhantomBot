@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,12 +20,7 @@
  *
  * Export general file management to th $ API
  */
-(function() {
-    var JFile = java.io.File,
-        JFileInputStream = java.io.FileInputStream,
-        JFileOutputStream = java.io.FileOutputStream,
-        fileHandles = [];
-
+(function () {
     /**
      * @function readFile
      * @export $
@@ -39,13 +34,16 @@
             return lines;
         }
 
+        if (invalidLocation(path)) {
+            $.consoleLn('Blocked readFile() target outside of validPaths:' + path);
+            return lines;
+        }
+
         try {
-            var fis = new JFileInputStream(path),
-                scan = new java.util.Scanner(fis);
-            for (var i = 0; scan.hasNextLine(); ++i) {
-                lines[i] = scan.nextLine();
+            var jlines = Packages.com.gmt2001.JSFileSystem.ReadFileAsLines($.javaString(path));
+            for (var i = 0; i < jlines.size(); ++i) {
+                lines.push($.jsString(jlines.get(i)));
             }
-            fis.close();
         } catch (e) {
             $.log.error('Failed to open \'' + path + '\': ' + e);
         }
@@ -59,8 +57,12 @@
      * @returns {boolean}
      */
     function mkDir(path) {
-        var dir = new JFile(path);
-        return dir.mkdir();
+        if (invalidLocation(path)) {
+            $.consoleLn('Blocked mkDir() target outside of validPaths:' + path);
+            return false;
+        }
+
+        return Packages.com.gmt2001.JSFileSystem.MakeDir($.javaString(path));
     }
 
     /**
@@ -70,15 +72,15 @@
      * @param {string} path
      */
     function moveFile(file, path) {
-        var fileO = new JFile(file),
-            pathO = new JFile(path);
+        if (invalidLocation(file) || invalidLocation(path)) {
+            $.consoleLn('Blocked moveFile() source or target outside of validPaths:' + file + ' to ' + path);
+            return;
+        }
 
-        if ((fileO != null && pathO != null) || (file != "" && path != "")) {
-            try {
-                org.apache.commons.io.FileUtils.moveFileToDirectory(fileO, pathO, true);
-            } catch (ex) {
-                $.log.error("moveFile(" + file + ", " + path + ") failed: " + ex);
-            }
+        try {
+            Packages.com.gmt2001.JSFileSystem.MoveFileToDirectory($.javaString(file), $.javaString(path));
+        } catch (ex) {
+            $.log.error("moveFile(" + file + ", " + path + ") failed: " + ex);
         }
     }
 
@@ -90,31 +92,19 @@
      * @param {boolean} append
      */
     function saveArray(array, path, append) {
+        if (invalidLocation(path)) {
+            $.consoleLn('Blocked saveArray() target outside of validPaths:' + path);
+            return;
+        }
+
         try {
-            var fos = new JFileOutputStream(path, append),
-                ps = new java.io.PrintStream(fos),
-                l = array.length;
-            for (var i = 0; i < l; ++i) {
-                ps.println(array[i]);
+            var lines = new Packages.com.gmt2001.JSFileSystem.CreateStringList();
+            for (var i = 0; i < array.length; ++i) {
+                lines.add($.javaString(array[i]));
             }
-            fos.close();
+            Packages.com.gmt2001.JSFileSystem.WriteLinesToFile($.javaString(path), lines, append);
         } catch (e) {
             $.log.error('Failed to write to \'' + path + '\': ' + e);
-        }
-    }
-
-    /**
-     * @function closeOpenFiles
-     */
-    function closeOpenFiles() {
-        var dateFormat = new java.text.SimpleDateFormat('MM-dd-yyyy'),
-            date = dateFormat.format(new java.util.Date());
-
-        for (var key in fileHandles) {
-            if (!fileHandles[key].startDate.equals(date)) {
-                fileHandles[key].fos.close();
-                delete fileHandles[key];
-            }
         }
     }
 
@@ -126,29 +116,13 @@
      * @param {boolean} append
      */
     function writeToFile(line, path, append) {
-        var dateFormat = new java.text.SimpleDateFormat('MM-dd-yyyy'),
-            date = dateFormat.format(new java.util.Date()),
-            fos,
-            ps;
-
-        closeOpenFiles();
-
-        if (fileHandles[path] !== undefined && append) {
-            fos = fileHandles[path].fos;
-            ps = fileHandles[path].ps;
-        } else {
-            fos = new JFileOutputStream(path, append);
-            ps = new java.io.PrintStream(fos);
-            fileHandles[path] = {
-                fos: fos,
-                ps: ps,
-                startDate: date
-            };
+        if (invalidLocation(path)) {
+            $.consoleLn('Blocked writeToFile() target outside of validPaths:' + path);
+            return;
         }
 
         try {
-            ps.println(line);
-            fos.flush();
+            Packages.com.gmt2001.JSFileSystem.WriteLineToFile($.javaString(path), $.javaString(line), append);
         } catch (e) {
             $.log.error('Failed to write to \'' + path + '\': ' + e);
         }
@@ -160,9 +134,13 @@
      * @param {string} path
      */
     function touchFile(path) {
+        if (invalidLocation(path)) {
+            $.consoleLn('Blocked touchFile() target outside of validPaths:' + path);
+            return;
+        }
+
         try {
-            var fos = new JFileOutputStream(path, true);
-            fos.close();
+            Packages.com.gmt2001.JSFileSystem.TouchFile($.javaString(path));
         } catch (e) {
             $.log.error('Failed to touch \'' + path + '\': ' + e);
         }
@@ -175,13 +153,13 @@
      * @param {boolean} now
      */
     function deleteFile(path, now) {
+        if (invalidLocation(path)) {
+            $.consoleLn('Blocked deleteFile() target outside of validPaths:' + path);
+            return;
+        }
+
         try {
-            var f = new JFile(path);
-            if (now) {
-                f['delete']();
-            } else {
-                f.deleteOnExit();
-            }
+            Packages.com.gmt2001.JSFileSystem.DeleteFile($.javaString(path));
         } catch (e) {
             $.log.error('Failed to delete \'' + path + '\': ' + e);
         }
@@ -194,12 +172,12 @@
      * @returns {boolean}
      */
     function fileExists(path) {
-        try {
-            var f = new JFile(path);
-            return f.exists();
-        } catch (e) {
+        if (invalidLocation(path)) {
+            $.consoleLn('Blocked fileExists() target outside of validPaths:' + path);
             return false;
         }
+
+        return Packages.com.gmt2001.JSFileSystem.FileExists($.javaString(path));
     }
 
     /**
@@ -210,18 +188,18 @@
      * @returns {Array}
      */
     function findFiles(directory, pattern) {
+        if (invalidLocation(directory)) {
+            $.consoleLn('Blocked findFiles() target outside of validPaths:' + directory);
+            return [];
+        }
+
         try {
-            var f = new JFile(directory),
-                ret = [];
-            if (f.isDirectory()) {
-                var files = f.list();
-                for (var i = 0; i < files.length; i++) {
-                    if (files[i].indexOf(pattern) != -1) {
-                        ret.push(files[i]);
-                    }
-                }
-                return ret;
+            var ret = [];
+            var files = Packages.com.gmt2001.JSFileSystem.FindFilesInDirectory($.javaString(directory), $.javaString(pattern));
+            for (var i = 0; i < files.size(); i++) {
+                ret.push($.jsString(files.get(i)));
             }
+            return ret;
         } catch (e) {
             $.log.error('Failed to search in \'' + directory + '\': ' + e);
         }
@@ -235,12 +213,12 @@
      * @returns {boolean}
      */
     function isDirectory(path) {
-        try {
-            var f = new JFile(path);
-            return f.isDirectory();
-        } catch (e) {
+        if (invalidLocation(path)) {
+            $.consoleLn('Blocked isDirectory() target outside of validPaths:' + path);
             return false;
         }
+
+        return Packages.com.gmt2001.JSFileSystem.IsDirectory($.javaString(path));
     }
 
     /**
@@ -250,8 +228,16 @@
      * @returns {Number}
      */
     function findSize(file) {
-        var fileO = new JFile(file);
-        return fileO.length();
+        if (invalidLocation(file)) {
+            $.consoleLn('Blocked findSize() target outside of validPaths:' + file);
+            return 0;
+        }
+
+        return Packages.com.gmt2001.JSFileSystem.GetFileSize($.javaString(file));
+    }
+
+    function invalidLocation(path) {
+        return !Packages.com.gmt2001.PathValidator.isValidPathScript($.javaString(path));
     }
 
     /** Export functions to API */

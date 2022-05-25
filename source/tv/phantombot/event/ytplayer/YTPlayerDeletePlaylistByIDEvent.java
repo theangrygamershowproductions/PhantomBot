@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@ public class YTPlayerDeletePlaylistByIDEvent extends YTPlayerEvent {
     /**
      * Class constructor.
      *
-     * @param {String} youTubeID
+     * @param youTubeID
      */
     public YTPlayerDeletePlaylistByIDEvent(String youTubeID) {
         this.youTubeID = youTubeID;
@@ -31,7 +31,7 @@ public class YTPlayerDeletePlaylistByIDEvent extends YTPlayerEvent {
     /**
      * Method that returns the YouTube song ID.
      *
-     * @return {String} youTubeID
+     * @return youTubeID
      */
     public String getYouTubeID() {
         return this.youTubeID;

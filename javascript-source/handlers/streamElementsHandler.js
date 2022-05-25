@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -66,7 +66,7 @@
             donationUsername = paramObj.getJSONObject('user').getString('username'),
             donationCurrency = paramObj.getString('currency'),
             donationMessage = (paramObj.has('message') ? paramObj.getString('message') : ''),
-            donationAmount = paramObj.getInt('amount'),
+            donationAmount = paramObj.getFloat('amount'),
             s = message;
 
         if ($.inidb.exists('donations', donationID)) {
@@ -93,11 +93,11 @@
             }
 
             if (s.match(/\(amount\)/)) {
-                s = $.replace(s, '(amount)', String(parseInt(donationAmount.toFixed(2))));
+                s = $.replace(s, '(amount)', String(donationAmount.toFixed(2)));
             }
 
             if (s.match(/\(amount\.toFixed\(0\)\)/)) {
-                s = $.replace(s, '(amount.toFixed(0))', String(parseInt(donationAmount.toFixed(0))));
+                s = $.replace(s, '(amount.toFixed(0))', String(donationAmount.toFixed(0)));
             }
 
             if (s.match(/\(message\)/)) {
@@ -106,6 +106,27 @@
 
             if (s.match(/\(reward\)/)) {
                 s = $.replace(s, '(reward)', $.getPointsString(Math.floor(parseFloat(donationAmount) * reward)));
+            }
+
+            if (s.match(/\(alert [,.\w\W]+\)/g)) {
+                var filename = s.match(/\(alert ([,.\w\W]+)\)/)[1];
+                $.alertspollssocket.alertImage(filename);
+                s = (s + '').replace(/\(alert [,.\w\W]+\)/, '');
+                if (s == '') {
+                    return null;
+                }
+            }
+
+            if (s.match(/\(playsound\s([a-zA-Z1-9_]+)\)/g)) {
+                if (!$.audioHookExists(s.match(/\(playsound\s([a-zA-Z1-9_]+)\)/)[1])) {
+                    $.log.error('Could not play audio hook: Audio hook does not exist.');
+                } else {
+                    $.alertspollssocket.triggerAudioPanel(message.match(/\(playsound\s([a-zA-Z1-9_]+)\)/)[1]);
+                }
+                s = $.replace(s, s.match(/\(playsound\s([a-zA-Z1-9_]+)\)/)[0], '');
+                if (s == '') {
+                    return null;
+                }
             }
 
             $.say(s);

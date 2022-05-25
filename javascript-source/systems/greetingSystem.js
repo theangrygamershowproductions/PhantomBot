@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,24 +21,23 @@
  * Tags in greetings:
  * - (name) The username corresponding to the target user
  */
-(function() {
+(function () {
     var autoGreetEnabled = $.getSetIniDbBoolean('greeting', 'autoGreetEnabled', false),
-        defaultJoinMessage = $.getSetIniDbString('greeting', 'defaultJoin', '(name) joined!'),
-        greetingCooldown = $.getSetIniDbNumber('greeting', 'cooldown', (6 * 36e5)),
-        /* 6 Hours */
-        greetingQueue = new java.util.concurrent.ConcurrentLinkedQueue,
-        lastAutoGreet = $.systemTime();
+            defaultJoinMessage = $.getSetIniDbString('greeting', 'defaultJoin', '(name) joined!'),
+            greetingCooldown = $.getSetIniDbNumber('greeting', 'cooldown', (6 * 36e5)),
+            /* 6 Hours */
+            greetingQueue = new java.util.concurrent.ConcurrentLinkedQueue;
 
     /**
      * @event ircChannelJoin
      */
-    $.bind('ircChannelJoin', function(event) {
+    $.bind('ircChannelJoin', function (event) {
         if ($.isOnline($.channelName) && autoGreetEnabled) {
             var sender = event.getUser().toLowerCase(),
-                username = $.resolveRank(sender),
-                message = $.getIniDbString('greeting', sender, ''),
-                lastUserGreeting = $.getIniDbNumber('greetingCoolDown', sender, 0),
-                now = $.systemTime();
+                    username = $.resolveRank(sender),
+                    message = $.getIniDbString('greeting', sender, ''),
+                    lastUserGreeting = $.getIniDbNumber('greetingCoolDown', sender, 0),
+                    now = $.systemTime();
 
             if (lastUserGreeting + greetingCooldown < now) {
                 if (message) {
@@ -51,12 +50,12 @@
 
     /**
      * @function doUserGreetings
-     * Provides timer function for sending greetings into chat. Will delete messages if the 
+     * Provides timer function for sending greetings into chat. Will delete messages if the
      * host disables autoGreetings in the middle of a loop.  The reason for a delay is to
      * ensure that the output queue does not become overwhelmed.
      */
     function doUserGreetings() {
-        setInterval(function() {
+        setInterval(function () {
 
             /* Send a greeting out into chat. */
             if (!greetingQueue.isEmpty() && autoGreetEnabled) {
@@ -83,13 +82,15 @@
     /**
      * @event command
      */
-    $.bind('command', function(event) {
+    $.bind('command', function (event) {
         var sender = event.getSender().toLowerCase(),
-            command = event.getCommand(),
-            args = event.getArgs(),
-            action = args[0],
-            cooldown,
-            message;
+                command = event.getCommand(),
+                args = event.getArgs(),
+                action = args[0],
+                cooldown,
+                message,
+                username,
+                isSilent;
 
         /**
          * @commandpath greeting - Base command for controlling greetings.
@@ -135,6 +136,7 @@
                 } else {
                     $.say($.whisperPrefix(sender) + $.lang.get('greetingsystem.set.autogreet.disabled', $.username.resolve($.botName)));
                 }
+                return;
             }
 
             /**
@@ -151,6 +153,7 @@
                 $.inidb.set('greeting', 'defaultJoin', message);
                 defaultJoinMessage = message;
                 $.say($.whisperPrefix(sender) + $.lang.get('greetingsystem.set.default.success', defaultJoinMessage));
+                return;
             }
 
             /**
@@ -170,6 +173,55 @@
                     $.inidb.set('greeting', sender, message);
                 }
                 $.say($.whisperPrefix(sender) + $.lang.get('greetingsystem.set.personal.success', $.inidb.get('greeting', sender)));
+                return;
+            }
+
+            /**
+             * @commandpath greeting set [username] [default | message] - Set greetings for a user and use the default or set a message.
+             */
+            if (action.equalsIgnoreCase('set') || action.equalsIgnoreCase('setsilent')) {
+                isSilent = action.equalsIgnoreCase('setsilent');
+                username = args[1].toLowerCase();
+                message = args.splice(2, args.length - 1).join(' ');
+
+                if (!message || !username) {
+                    if (!isSilent) {
+                        $.say($.whisperPrefix(sender) + $.lang.get('greetingsystem.generalusage.other'));
+                    }
+                    return;
+                }
+
+                if (message.equalsIgnoreCase('default')) {
+                    $.inidb.set('greeting', username, defaultJoinMessage);
+                } else {
+                    $.inidb.set('greeting', username, message);
+                }
+                if (!isSilent) {
+                    $.say($.whisperPrefix(sender) + $.lang.get('greetingsystem.set.success', username, $.inidb.get('greeting', username)));
+                }
+                return;
+            }
+
+            /**
+             * @commandpath greeting remove [username] - Delete a users greeting and automated greeting at join
+             */
+            if (action.equalsIgnoreCase('remove') || action.equalsIgnoreCase('removesilent')) {
+                isSilent = action.equalsIgnoreCase('removesilent');
+                username = args[1].toLowerCase();
+
+                if (args[1] === undefined) {
+                    if (!isSilent) {
+                        $.say($.whisperPrefix(sender) + $.lang.get('greetingsystem.remove.error'));
+                    }
+                    return;
+                }
+                if ($.inidb.exists('greeting', args[1])) {
+                    $.inidb.del('greeting', args[1]);
+                    if (!isSilent) {
+                        $.say($.whisperPrefix(sender) + $.lang.get('greetingsystem.remove.success', args[1]));
+                    }
+                }
+                return;
             }
 
             /**
@@ -180,6 +232,7 @@
                     $.inidb.del('greeting', sender);
                     $.say($.whisperPrefix(sender) + $.lang.get('greetingsystem.remove.personal.success'));
                 }
+                return;
             }
         }
     });
@@ -187,12 +240,16 @@
     /**
      * @event initReady
      */
-    $.bind('initReady', function() {
+    $.bind('initReady', function () {
         $.registerChatCommand('./systems/greetingSystem.js', 'greeting', 6);
         $.registerChatSubcommand('greeting', 'cooldown', 1);
         $.registerChatSubcommand('greeting', 'toggle', 1);
+        $.registerChatSubcommand('greeting', 'set', 2);
+        $.registerChatSubcommand('greeting', 'setsilent', 1);
         $.registerChatSubcommand('greeting', 'setdefault', 2);
         $.registerChatSubcommand('greeting', 'enable', 6);
+        $.registerChatSubcommand('greeting', 'remove', 2);
+        $.registerChatSubcommand('greeting', 'removesilent', 1);
         $.registerChatSubcommand('greeting', 'disable', 6);
 
         doUserGreetings();

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@ public class YTPlayerVolumeEvent extends YTPlayerEvent {
     /**
      * Class constructor.
      *
-     * @param {int} volume
+     * @param volume
      */
     public YTPlayerVolumeEvent(int volume) {
         this.volume = volume;
@@ -31,7 +31,7 @@ public class YTPlayerVolumeEvent extends YTPlayerEvent {
     /**
      * Method that returns the volume level.
      *
-     * @return {int} volume
+     * @return volume
      */
     public int getVolume() {
         return this.volume;

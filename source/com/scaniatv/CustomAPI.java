@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,31 +14,29 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 // This class is made to be used in the scripts to call APIs. It will make it way more simple with $.customAPI
 package com.scaniatv;
 
 import com.gmt2001.HttpRequest;
 import com.gmt2001.HttpResponse;
-
 import java.util.HashMap;
-
-import org.json.JSONObject;
 import org.json.JSONException;
+import org.json.JSONObject;
 
 public class CustomAPI {
+
     private static CustomAPI instance;
 
     /*
      * Method to the this instance.
      *
-     * @return {Object}
+     * @return
      */
     public static synchronized CustomAPI instance() {
         if (instance == null) {
             instance = new CustomAPI();
         }
-        
+
         return instance;
     }
 
@@ -53,18 +51,18 @@ public class CustomAPI {
      * Method to get a JSON Object from an API.
      *
      * @param  {String} url
-     * @return {JSONObject}
+     * @return
      */
     public JSONObject getJSON(String url) throws JSONException {
         try {
-            HttpResponse data = HttpRequest.getData(HttpRequest.RequestType.GET, url, "", new HashMap<String, String>());
+            HttpResponse data = HttpRequest.getData(HttpRequest.RequestType.GET, url, "", new HashMap<>());
             if (data.success) {
                 return new JSONObject(data.content);
             } else {
                 throw new JSONException(data.httpCode + ": " + data.exception);
             }
         } catch (JSONException ex) {
-            com.gmt2001.Console.err.println("Failed to get JSON data from API: " + ex.getMessage());
+            com.gmt2001.Console.err.printStackTrace(ex);
         }
         return new JSONObject("{}");
     }
@@ -73,10 +71,10 @@ public class CustomAPI {
      * Method to get data from an API.
      *
      * @param  {String} url
-     * @return {HttpResponse}
+     * @return
      */
     public HttpResponse get(String url) {
-        return HttpRequest.getData(HttpRequest.RequestType.GET, url, "", new HashMap<String, String>());
+        return HttpRequest.getData(HttpRequest.RequestType.GET, url, "", new HashMap<>());
     }
 
     /*
@@ -84,10 +82,10 @@ public class CustomAPI {
      *
      * @param  {String} url
      * @param  {String} content
-     * @return {HttpResponse}
+     * @return
      */
     public HttpResponse post(String url, String content) {
-        return HttpRequest.getData(HttpRequest.RequestType.POST, url, content, new HashMap<String, String>());
+        return HttpRequest.getData(HttpRequest.RequestType.POST, url, content, new HashMap<>());
     }
 
     /*
@@ -95,10 +93,10 @@ public class CustomAPI {
      *
      * @param  {String} url
      * @param  {String} content
-     * @return {HttpResponse}
+     * @return
      */
     public HttpResponse put(String url, String content) {
-        return HttpRequest.getData(HttpRequest.RequestType.PUT, url, content, new HashMap<String, String>());
+        return HttpRequest.getData(HttpRequest.RequestType.PUT, url, content, new HashMap<>());
     }
 
     /*
@@ -106,9 +104,9 @@ public class CustomAPI {
      *
      * @param  {String} url
      * @param  {String} content
-     * @return {HttpResponse}
+     * @return
      */
     public HttpResponse del(String url, String content) {
-        return HttpRequest.getData(HttpRequest.RequestType.DELETE, url, content, new HashMap<String, String>());
+        return HttpRequest.getData(HttpRequest.RequestType.DELETE, url, content, new HashMap<>());
     }
 }

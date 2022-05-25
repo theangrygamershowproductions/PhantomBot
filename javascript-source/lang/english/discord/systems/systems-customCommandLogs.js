@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,3 +34,5 @@ $.lang.register('discord.customcommandlogs.disable.command', 'Command disabled')
 $.lang.register('discord.customcommandlogs.enable.command', 'Command enabled');
 $.lang.register('discord.customcommandlogs.reset.command', 'Command counter reset');
 $.lang.register('discord.customcommandlogs.reset.count', 'New value');
+$.lang.register('discord.customcommandlogs.hide.command', 'Command hidden from !commands list');
+$.lang.register('discord.customcommandlogs.show.command', 'Command shown in !commands list');

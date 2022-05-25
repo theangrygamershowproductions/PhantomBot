@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,9 +18,7 @@ package tv.phantombot.event.irc.message;
 
 import java.util.HashMap;
 import java.util.Map;
-
 import tv.phantombot.event.irc.IrcEvent;
-
 import tv.phantombot.twitch.irc.TwitchSession;
 
 public abstract class IrcMessageEvent extends IrcEvent {
@@ -31,9 +29,9 @@ public abstract class IrcMessageEvent extends IrcEvent {
     /**
      * Class constructor.
      *
-     * @param {TwitchSession} session
-     * @param {String}  sender
-     * @param {String}  message
+     * @param session
+     * @param  sender
+     * @param  message
      */
     protected IrcMessageEvent(TwitchSession session, String sender, String message) {
         super(session);
@@ -46,10 +44,10 @@ public abstract class IrcMessageEvent extends IrcEvent {
     /**
      * Class constructor.
      *
-     * @param {TwitchSession} session
-     * @param {String}  sender
-     * @param {String}  message
-     * @param {Map}     tags
+     * @param session
+     * @param  sender
+     * @param  message
+     * @param     tags
      */
     protected IrcMessageEvent(TwitchSession session, String sender, String message, Map<String, String> tags) {
         super(session);
@@ -62,7 +60,7 @@ public abstract class IrcMessageEvent extends IrcEvent {
     /**
      * Method that returns the sender.
      *
-     * @return {String} sender
+     * @return sender
      */
     public String getSender() {
         return this.sender;
@@ -71,7 +69,7 @@ public abstract class IrcMessageEvent extends IrcEvent {
     /**
      * Method that returns the message.
      *
-     * @return {String} sender
+     * @return sender
      */
     public String getMessage() {
         return this.message;
@@ -80,7 +78,7 @@ public abstract class IrcMessageEvent extends IrcEvent {
     /**
      * Method that returns the IRCv3 tags.
      *
-     * @return {Map} tags
+     * @return tags
      */
     public Map<String, String> getTags() {
         return this.tags;

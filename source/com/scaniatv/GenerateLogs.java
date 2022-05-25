@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,18 +17,15 @@
 
 package com.scaniatv;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.BufferedWriter;
-import java.io.BufferedReader;
-
-import java.util.Date;
 import java.text.SimpleDateFormat;
-
+import java.util.Date;
 import org.joda.time.DateTime;
-
 import tv.phantombot.PhantomBot;
 
 /*
@@ -80,7 +77,7 @@ public class GenerateLogs {
      * Method that will read the log files.
      *
      * @param  {String} file
-     * @return {String}
+     * @return
      */
     private static String readFile(String file) {
         BufferedReader bufferedReader = null;
@@ -96,7 +93,7 @@ public class GenerateLogs {
                 }
             }
         } catch (IOException ex) {
-            com.gmt2001.Console.err.println("Failed to read log file: [" + file + "] [IOException] " + ex.getMessage());
+            com.gmt2001.Console.err.printStackTrace(ex);
         } finally {
             if (bufferedReader != null) {
                 try {
@@ -113,8 +110,8 @@ public class GenerateLogs {
     /*
      * Method used to write the log data to a file in the main bot folder.
      *
-     * @param {String} file
-     * @param {String} data
+     * @param file
+     * @param data
      */
     private static void writeToFile(String file, String data) {
         BufferedWriter bufferedWriter = null;
@@ -125,7 +122,7 @@ public class GenerateLogs {
             bufferedWriter.write(data);
             bufferedWriter.flush();
         } catch (IOException ex) {
-            com.gmt2001.Console.err.println("Failed to write log file: [" + file + "] [IOException] " + ex.getMessage());
+            com.gmt2001.Console.err.printStackTrace(ex);
         } finally {
             if (bufferedWriter != null) {
                 try {
@@ -140,9 +137,9 @@ public class GenerateLogs {
     /*
      * Method to get the current date of log files.
      *
-     * @param  {Boolean} isGMT
-     * @param  {Boolean} minusDay
-     * @return {String}
+     * @param  {boolean} isGMT
+     * @param  {boolean} minusDay
+     * @return
      */
     private static String getDate(boolean isGMT, boolean minusDay) {
         SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy");

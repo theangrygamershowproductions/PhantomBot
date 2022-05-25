@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,10 +19,10 @@
  * init.js
  * This scripts handles all events and most things for the scripts.
  */
-(function() {
+(function () {
     var isReady = false,
-        modules = [],
-        hooks = [];
+            modules = [],
+            hooks = [];
 
     /*
      * @class Module
@@ -36,9 +36,9 @@
         this.isEnabled = isEnabled;
         this.script = script;
 
-        this.getModuleName = function() {
+        this.getModuleName = function () {
             return this.scriptName.match(/((\w+)\.js)$/)[2];
-        }
+        };
     }
 
     /*
@@ -48,10 +48,12 @@
      * @param {String}   hookName
      * @param {Function} handler
      */
-    function Hook(scriptName, hookName, handler) {
+    function Hook(scriptName, hookName, handler, scriptPath) {
+        hookName = $api.formatEventName(hookName) + '';
         this.scriptName = scriptName;
         this.hookName = hookName;
         this.handler = handler;
+        this.scriptPath = scriptPath;
     }
 
     /*
@@ -93,22 +95,22 @@
      */
     function generateJavaTrampolines() {
         var name,
-            isJavaProperty = function(name) {
-                var blacklist = ['getClass', 'equals', 'notify', 'class', 'hashCode', 'toString', 'wait', 'notifyAll'];
+                isJavaProperty = function (name) {
+                    var blacklist = ['getClass', 'equals', 'notify', 'class', 'hashCode', 'toString', 'wait', 'notifyAll'];
 
-                return (blacklist[name] !== undefined);
-            },
-            generateTrampoline = function(obj, name) {
-                return function() {
-                    var args = [$script];
+                    return (blacklist[name] !== undefined);
+                },
+                generateTrampoline = function (obj, name) {
+                    return function () {
+                        var args = [$script];
 
-                    for (var i = 0; i < arguments.length; i++) {
-                        args.push(arguments[i]);
-                    }
+                        for (var i = 0; i < arguments.length; i++) {
+                            args.push(arguments[i]);
+                        }
 
-                    obj[name].save(obj, args);
+                        obj[name].save(obj, args);
+                    };
                 };
-            };
 
         for (name in $api) {
             if (!isJavaProperty(name)) {
@@ -133,7 +135,7 @@
             if (scriptName.endsWith('.js')) {
                 try {
                     var enabled,
-                        script;
+                            script;
 
                     if ($api.getScript($script, scriptName) != null) {
                         script = $api.reloadScriptR($script, scriptName);
@@ -164,36 +166,24 @@
      */
     function loadScriptRecursive(path, silent, force) {
         var files = $.findFiles('./scripts/' + path, ''),
-            i;
+                i;
 
         for (i in files) {
+            files[i] = $.jsString(files[i]);
             if (path === '.') {
-                if (files[i] == 'core' || files[i] == 'lang' || files[i] == 'discord' || files[i] == 'init.js') {
-                    continue;
-                }
-            } else if (path === './discord') {
-                if (files[i] == 'core') {
+                if (files[i] === 'lang' || files[i] === 'discord' || files[i] === 'init.js') {
                     continue;
                 }
             }
 
             if ($.isDirectory('./scripts/' + path + '/' + files[i])) {
-                loadScriptRecursive(path + '/' + files[i], silent, (force ? force : false));
+                loadScriptRecursive(path + '/' + files[i], silent, (force && path !== './core' && path !== './discord/core' ? force : false));
             } else {
-                loadScript(path + '/' + files[i], (force ? force : false), silent);
+                loadScript(path + '/' + files[i], (force && path !== './core' && path !== './discord/core' ? force : false), silent);
             }
         }
     }
 
-    /*
-     * @function getModuleIndex
-     *
-     * @param  {String} scriptName
-     * @return {Number}
-     */
-    function getModuleIndex(scriptName) {
-        return modules.indexOf(scriptName);
-    }
 
     /*
      * @function isModuleEnabled
@@ -233,6 +223,7 @@
      * @return {Object}
      */
     function getHook(scriptName, hookName) {
+        hookName = $api.formatEventName(hookName) + '';
         return (hooks[hookName] !== undefined ? hooks[hookName].handlers[getHookIndex(scriptName, hookName)] : null);
     }
 
@@ -244,8 +235,9 @@
      * @return {Number}
      */
     function getHookIndex(scriptName, hookName) {
+        hookName = $api.formatEventName(hookName) + '';
         var hook = hooks[hookName],
-            i;
+                i;
 
         if (hook !== undefined) {
             for (i in hook.handlers) {
@@ -264,8 +256,9 @@
      * @param {Function} handler
      */
     function addHook(hookName, handler) {
-        var scriptName = $script.getPath().replace('\\', '/').replace('./scripts/', ''),
-            i = getHookIndex(scriptName, hookName);
+        hookName = $api.formatEventName(hookName) + '';
+        var scriptName = $.replace($.replace($script.getPath(), '\\', '/'), './scripts/', ''),
+                i = getHookIndex(scriptName, hookName);
 
         if (hookName !== 'initReady' && $api.exists(hookName) == false) {
             Packages.com.gmt2001.Console.err.printlnRhino('[addHook()@init.js:254] Failed to register hook "' + hookName + '" since there is no such event.');
@@ -275,7 +268,7 @@
             if (hooks[hookName] === undefined) {
                 hooks[hookName] = new HookHandler(hookName);
             }
-            hooks[hookName].handlers.push(new Hook(scriptName, hookName, handler));
+            hooks[hookName].handlers.push(new Hook(scriptName, hookName, handler, $script.getRealFileName()));
         }
     }
 
@@ -285,8 +278,9 @@
      * @param {String} hookName
      */
     function removeHook(hookName) {
-        var scriptName = $script.getPath().replace('\\', '/').replace('./scripts/', ''),
-            i = getHookIndex(scriptName, hookName);
+        hookName = $api.formatEventName(hookName) + '';
+        var scriptName = $.replace($.replace($script.getPath(), '\\', '/'), './scripts/', ''),
+                i = getHookIndex(scriptName, hookName);
 
         if (hooks[hookName] !== undefined) {
             hooks[hookName].handlers.splice(i, 1);
@@ -301,8 +295,9 @@
      * @param {Boolean} force
      */
     function callHook(hookName, event, force) {
+        hookName = $api.formatEventName(hookName) + '';
         var hook = hooks[hookName],
-            i;
+                i;
 
         if (hook === undefined) {
             return;
@@ -314,7 +309,22 @@
             try {
                 hook.handlers[i].handler(event);
             } catch (ex) {
-                $.log.error('Error with Event Handler [' + hookName + '] Script [' + hook.handlers[i].scriptName + '] Stacktrace [' + ex.stack.trim().replace(/\r/g, '').split('\n').join(' > ').replace(/anonymous\(\)@|callHook\(\)@/g, '') + '] Exception [' + ex + ']');
+                var errmsg;
+                try {
+                    errmsg = 'Error with Event Handler [' + hookName + '] Script [' + hook.handlers[i].scriptPath + '] Stacktrace [' + ex.stack.trim().replace(/\r/g, '').split('\n').join(' > ').replace(/anonymous\(\)@|callHook\(\)@/g, '') + '] Exception [' + ex + ']';
+                } catch (ex2) {
+                    errmsg = 'Error with Event Handler [' + hookName + '] Script [' + hook.handlers[i].scriptPath + ']';
+                }
+                $.log.error(errmsg);
+                if (ex.javaException !== undefined) {
+                    $.consoleLn("Sending stack trace to error log...");
+                    Packages.com.gmt2001.Console.err.printStackTrace(ex.javaException, errmsg);
+                } else {
+                    try {
+                        Packages.com.gmt2001.Console.err.printStackTrace(ex, errmsg);
+                    } catch (ex3) {
+                    }
+                }
             }
         } else {
             for (i in hook.handlers) {
@@ -322,7 +332,22 @@
                     try {
                         hook.handlers[i].handler(event);
                     } catch (ex) {
-                        $.log.error('Error with Event Handler [' + hookName + '] Script [' + hook.handlers[i].scriptName + '] Stacktrace [' + ex.stack.trim().replace(/\r/g, '').split('\n').join(' > ').replace(/anonymous\(\)@|callHook\(\)@/g, '') + '] Exception [' + ex + ']');
+                        var errmsg;
+                        try {
+                            errmsg = 'Error with Event Handler [' + hookName + '] Script [' + hook.handlers[i].scriptPath + '] Stacktrace [' + ex.stack.trim().replace(/\r/g, '').split('\n').join(' > ').replace(/anonymous\(\)@|callHook\(\)@/g, '') + '] Exception [' + ex + ']'
+                        } catch (ex2) {
+                            errmsg = 'Error with Event Handler [' + hookName + '] Script [' + hook.handlers[i].scriptPath + ']';
+                        }
+                        $.log.error(errmsg);
+                        if (ex.javaException !== undefined) {
+                            $.consoleLn("Sending stack trace to error log...");
+                            Packages.com.gmt2001.Console.err.printStackTrace(ex.javaException, errmsg);
+                        } else {
+                            try {
+                                Packages.com.gmt2001.Console.err.printStackTrace(ex, errmsg);
+                            } catch (ex3) {
+                            }
+                        }
                     }
                 }
             }
@@ -349,6 +374,7 @@
         loadScript('./core/misc.js', false, silentScriptsLoad);
         loadScript('./core/jsTimers.js', false, silentScriptsLoad);
         loadScript('./core/updates.js', false, silentScriptsLoad);
+        loadScript('./core/commandTags.js', false, silentScriptsLoad);
         loadScript('./core/chatModerator.js', false, silentScriptsLoad);
         loadScript('./core/fileSystem.js', false, silentScriptsLoad);
         loadScript('./core/lang.js', false, silentScriptsLoad);
@@ -358,13 +384,8 @@
         loadScript('./core/whisper.js', false, silentScriptsLoad);
         loadScript('./core/commandCoolDown.js', false, silentScriptsLoad);
         loadScript('./core/keywordCoolDown.js', false, silentScriptsLoad);
-        loadScript('./core/gameMessages.js', false, silentScriptsLoad);
         loadScript('./core/patternDetector.js', false, silentScriptsLoad);
         loadScript('./core/permissions.js', false, silentScriptsLoad);
-        loadScript('./core/streamInfo.js', false, silentScriptsLoad);
-        loadScript('./core/timeSystem.js', false, silentScriptsLoad);
-        loadScript('./core/initCommands.js', false, silentScriptsLoad);
-        loadScript('./core/panelCommands.js', false, silentScriptsLoad);
 
         // Load all the other modules.
         loadScriptRecursive('.', silentScriptsLoad);
@@ -378,7 +399,6 @@
             loadScript('./discord/core/registerCommand.js', false, silentScriptsLoad);
             loadScript('./discord/core/accountLink.js', false, silentScriptsLoad);
             loadScript('./discord/core/commandCooldown.js', false, silentScriptsLoad);
-            loadScript('./discord/core/roleManager.js', false, silentScriptsLoad);
 
             // Load the other discord modules
             loadScriptRecursive('./discord', silentScriptsLoad);
@@ -388,9 +408,6 @@
         } else {
             $.inidb.set('panelData', 'hasDiscord', 'false');
         }
-
-        // Load new panel handler.
-        loadScript('./core/panelHandler.js', false, true);
 
         if (silentScriptsLoad) {
             consoleLn('Modules have been loaded.');
@@ -406,12 +423,12 @@
         if ($.isNightly) {
             consoleLn('PhantomBot Nightly Build - No Support is Provided');
             consoleLn('Please report bugs including the date of the Nightly Build and Repo Version to:');
-            consoleLn('https://community.phantombot.tv/c/support/bug-reports');
+            consoleLn('https://discord.gg/YKvMd78');
         } else if ($.isPrerelease) {
             consoleLn('PhantomBot Pre-Release Build - Please Report Bugs and Issues Found');
             consoleLn('When reporting bugs or issues, please remember to say that this is a pre-release build.');
         } else {
-            consoleLn('For support please visit: https://community.phantombot.tv');
+            consoleLn('For support please visit: https://discord.gg/YKvMd78');
         }
         consoleLn('');
     }
@@ -422,61 +439,61 @@
     function events() {
         // Load all API events.
 
+        var loadedHooks = [];
         /*
          * @event ircModeration
          */
-        $api.on($script, 'ircModeration', function(event) {
+        $api.on($script, 'ircModeration', function (event) {
             $.performModeration(event);
         });
-
-        /*
-         * @event ircChannelMessage
-         */
-        $api.on($script, 'ircChannelMessage', function(event) {
-            callHook('ircChannelMessage', event, false);
-        });
+        loadedHooks.push('ircModeration');
 
         /*
          * @event ircChannelUserMode
          */
-        $api.on($script, 'ircChannelUserMode', function(event) {
+        $api.on($script, 'ircChannelUserMode', function (event) {
             callHook('ircChannelUserMode', event, false);
 
             if (event.getUser().equalsIgnoreCase($.botName) && event.getMode().equalsIgnoreCase('O')) {
                 if (event.getAdd().toString().equals('true')) {
                     if (isReady === false) {
+                        isReady = true;
                         // Bot is now ready.
                         consoleLn($.botName + ' ready!');
                         // Call the initReady event.
                         callHook('initReady', null, false);
                     }
-                    isReady = true;
                 }
             }
         });
+        loadedHooks.push('ircChannelUserMode');
 
         /*
          * @event command
          */
-        $api.on($script, 'command', function(event) {
+        $api.on($script, 'command', function (event) {
             var sender = event.getSender(),
-                command = event.getCommand(),
-                args = event.getArgs(),
-                subCommand = $.getSubCommandFromArguments(command, args),
-                isMod = $.isModv3(sender, event.getTags());
+                    command = event.getCommand(),
+                    args = event.getArgs(),
+                    subCommand = $.getSubCommandFromArguments(command, args),
+                    isMod = $.isModv3(sender, event.getTags());
+
+            if (isReady === false && command.equalsIgnoreCase($.botName) && args[0].equalsIgnoreCase('moderate')) {
+                Packages.tv.phantombot.PhantomBot.instance().getSession().getModerationStatus();
+            }
 
             // Check if the command exists or if the module is disabled.
             if (!$.commandExists(command) || !isModuleEnabled($.getCommandScript(command))) {
                 return;
-            } else
+            }
 
             // Check if the command has an alias.
             if ($.aliasExists(command)) {
                 var alias = $.getIniDbString('aliases', command),
-                    aliasCommand,
-                    aliasArguments,
-                    subcmd,
-                    parts;
+                        aliasCommand,
+                        aliasArguments,
+                        subcmd,
+                        parts;
 
                 if (alias.indexOf(';') === -1) {
                     parts = alias.split(' ');
@@ -496,26 +513,46 @@
                     }
                 }
                 return;
-            } else
+            }
 
             // Check the command permission.
             if ($.permCom(sender, command, subCommand, event.getTags()) !== 0) {
                 $.sayWithTimeout($.whisperPrefix(sender) + $.lang.get('cmd.perm.404', (!$.subCommandExists(command, subCommand) ? $.getCommandGroupName(command) : $.getSubCommandGroupName(command, subCommand))), $.getIniDbBoolean('settings', 'permComMsgEnabled', false));
                 consoleDebug('Command !' + command + ' was not sent due to the user not having permission for it.');
                 return;
-            } else
-
-            // Check the command cooldown.
-            if ($.coolDown.get(command, sender, isMod) !== 0) {
-                $.sayWithTimeout($.whisperPrefix(sender) + $.lang.get('init.cooldown.msg', command, $.coolDown.getSecs(sender, command, isMod)), $.getIniDbBoolean('settings', 'coolDownMsgEnabled', false));
-                consoleDebug('Command !' + command + ' was not sent due to it being on cooldown.');
-                return;
-            } else
+            }
 
             // Check the command cost.
             if ($.priceCom(sender, command, subCommand, isMod) === 1) {
                 $.sayWithTimeout($.whisperPrefix(sender) + $.lang.get('cmd.needpoints', $.getPointsString($.getCommandPrice(command, subCommand, ''))), $.getIniDbBoolean('settings', 'priceComMsgEnabled', false));
                 consoleDebug('Command !' + command + ' was not sent due to the user not having enough points.');
+                return;
+            }
+
+            // Check the command cooldown.
+            var cooldownDuration,
+                isGlobalCooldown,
+                cooldownCommand = command;
+
+            if (args.length === 1 && $.coolDown.exists(cooldownCommand + ' ' + args[0])) {
+                cooldownCommand += ' ' + args[0];
+            }
+            if (args.length > 1 && $.coolDown.exists(cooldownCommand + ' ' + args[1])) {
+                cooldownCommand += ' ' + args[1];
+            } 
+
+            [cooldownDuration, isGlobalCooldown] = $.coolDown.get(cooldownCommand, sender, isMod);
+
+            if (cooldownDuration > 0) {
+                consoleDebug('Command ! ' + command + ' was not sent due to it being on cooldown ' + (isGlobalCooldown ? 'globally' : 'for user' + sender) + '.');
+                if ($.getIniDbBoolean('settings', 'coolDownMsgEnabled')) {
+                    if (isGlobalCooldown) {
+                        $.sayWithTimeout($.whisperPrefix(sender) + $.lang.get('init.cooldown.msg.global', command, cooldownDuration), true);
+                        
+                    } else {
+                        $.say($.whisperPrefix(sender) + $.lang.get('init.cooldown.msg.user', command, cooldownDuration));
+                    }
+                }
                 return;
             }
 
@@ -525,25 +562,26 @@
             // Decrease or add points after the command is sent to not slow anything down.
             if ($.priceCom(sender, command, subCommand, isMod) === 0) {
                 $.inidb.decr('points', sender, $.getCommandPrice(command, subCommand, ''));
-            } 
+            }
 
             if ($.payCom(command) === 0) {
                 $.inidb.incr('points', sender, $.getCommandPay(command));
             }
         });
+        loadedHooks.push('command');
 
         /*
          * @event discordChannelCommand
          */
-        $api.on($script, 'discordChannelCommand', function(event) {
+        $api.on($script, 'discordChannelCommand', function (event) {
             var username = event.getUsername(),
-                command = event.getCommand(),
-                user = event.getDiscordUser(),
-                channelName = event.getChannel(),
-                channelId = event.getChannelId(),
-                isAdmin = event.isAdmin(),
-                senderId = event.getSenderId(),
-                args = event.getArgs();
+                    command = event.getCommand(),
+                    user = event.getDiscordUser(),
+                    channelName = event.getChannel(),
+                    channelId = event.getChannelId(),
+                    isAdmin = event.isAdmin(),
+                    senderId = event.getSenderId(),
+                    args = event.getArgs();
 
             if ($.discord.commandExists(command) === false && ($.discord.aliasExists(command) === false || $.discord.aliasExists(command) === true && $.discord.commandExists($.discord.getCommandAlias(command)) === false)) {
                 return;
@@ -576,7 +614,29 @@
                 return;
             }
 
-            if (isAdmin == false && $.discord.cooldown.get(command, senderId) !== 0) {
+            // Check the command cooldown.
+            var cooldownDuration,
+                isGlobalCooldown,
+                cooldownCommand = command;
+
+            if (args.length === 1 && $.discord.cooldown.exists(cooldownCommand + ' ' + args[0])) {
+                cooldownCommand += ' ' + args[0];
+            }
+            if (args.length > 1 && $.discord.cooldown.exists(cooldownCommand + ' ' + args[1])) {
+                cooldownCommand += ' ' + args[1];
+            } 
+
+            [cooldownDuration, isGlobalCooldown] = $.discord.cooldown.get(cooldownCommand, senderId);
+
+            if (isAdmin === false && cooldownDuration > 0) {
+                if ($.getIniDbBoolean('discordCooldownSettings', 'coolDownMsgEnabled')) {
+                    consoleDebug('Discord command ! ' + command + ' was not sent due to it being on cooldown ' + (isGlobalCooldown ? 'globally' : 'for user' + username) + '.');
+                    if (isGlobalCooldown) {
+                        $.discord.say(channelId, $.discord.userPrefix(username) + $.lang.get('init.cooldown.msg.global', command, cooldownDuration));
+                    } else {
+                        $.discord.say(channelId, $.discord.userPrefix(username) + $.lang.get('init.cooldown.msg.user', command, cooldownDuration));
+                    }
+                }
                 return;
             }
 
@@ -585,6 +645,7 @@
             }
 
             if (!$.discord.getCommandChannelAllowed(command, channelName, channelId)) {
+                $.consoleLn('[Discord] Not processing command ' + command + ' due to !channelcom');
                 return;
             }
 
@@ -595,11 +656,12 @@
                 $.discord.decrUserPoints(senderId, $.discord.getCommandCost(command));
             }
         });
+        loadedHooks.push('discordChannelCommand');
 
         /*
-         * @event discordReady
+         * @event discordGuildCreate
          */
-        $api.on($script, 'discordReady', function(event) {
+        $api.on($script, 'discordGuildCreate', function (event) {
             var roles = $.discordAPI.getGuildRoles();
             var perms = {
                 roles: []
@@ -607,7 +669,7 @@
 
             for (var i = 0; i < roles.size(); i++) {
                 perms.roles.push({
-                    'name' : roles.get(i).getName() + '',
+                    'name': roles.get(i).getName() + '',
                     '_id': roles.get(i).getId().asString() + '',
                     'selected': 'false'
                 });
@@ -615,484 +677,21 @@
 
             $.inidb.set('discordPermsObj', 'obj', JSON.stringify(perms));
 
-            callHook('discordReady', event, false);
-        });
-
-        /*
-         * @event consoleInput
-         */
-        $api.on($script, 'consoleInput', function(event) {
-            callHook('consoleInput', event, false);
-        });
-
-        /*
-         * @event twitchFollow
-         */
-        $api.on($script, 'twitchFollow', function(event) {
-            callHook('twitchFollow', event, false);
-        });
-
-        /*
-         * @event twitchUnFollow
-         */
-        $api.on($script, 'twitchUnfollow', function(event) {
-            callHook('twitchUnfollow', event, false);
-        });
-
-        /*
-         * @event twitchFollowsInitialized
-         */
-        $api.on($script, 'twitchFollowsInitialized', function(event) {
-            callHook('twitchFollowsInitialized', event, false);
-        });
-
-        /*
-         * @event twitchHosted
-         */
-        $api.on($script, 'twitchHosted', function(event) {
-            callHook('twitchHosted', event, false);
-        });
-
-        /*
-         * @event twitchAutoHosted
-         */
-        $api.on($script, 'twitchAutoHosted', function(event) {
-            callHook('twitchAutoHosted', event, false);
-        });
-
-        /*
-         * @event twitchHostsInitialized
-         */
-        $api.on($script, 'twitchHostsInitialized', function(event) {
-            callHook('twitchHostsInitialized', event, false);
-        });
-
-        /*
-         * @event twitchClip
-         */
-        $api.on($script, 'twitchClip', function(event) {
-            callHook('twitchClip', event, false);
-        });
-
-        /*
-         * @event ircChannelJoin
-         */
-        $api.on($script, 'ircChannelJoin', function(event) {
-            callHook('ircChannelJoin', event, false);
-        });
-
-        /*
-         * @event ircChannelUsersUpdate
-         */
-        $api.on($script, 'ircChannelUsersUpdate', function(event) {
-            callHook('ircChannelUsersUpdate', event, false);
-        });
-
-        /*
-         * @event ircChannelLeave
-         */
-        $api.on($script, 'ircChannelLeave', function(event) {
-            callHook('ircChannelLeave', event, false);
-        });
-
-        /*
-         * @event ircJoinComplete
-         */
-        $api.on($script, 'ircJoinComplete', function(event) {
-            callHook('ircJoinComplete', event, false);
-        });
-
-        /*
-         * @event ircConnectComplete
-         */
-        $api.on($script, 'ircConnectComplete', function(event) {
-            callHook('ircConnectComplete', event, false);
-        });
-
-        /*
-         * @event ircPrivateMessage
-         */
-        $api.on($script, 'ircPrivateMessage', function(event) {
-            callHook('ircPrivateMessage', event, false);
-        });
-
-        /*
-         * @event ircClearchat
-         */
-        $api.on($script, 'ircClearchat', function(event) {
-            callHook('ircClearchat', event, false);
-        });
-
-        /*
-         * @event streamLabsDonation
-         */
-        $api.on($script, 'streamLabsDonation', function(event) {
-            callHook('streamLabsDonation', event, false);
-        });
-
-        /*
-         * @event streamLabsDonationInitialized
-         */
-        $api.on($script, 'streamLabsDonationInitialized', function(event) {
-            callHook('streamLabsDonationInitialized', event, false);
-        });
-
-        /*
-         * @event tipeeeStreamDonationInitialized
-         */
-        $api.on($script, 'tipeeeStreamDonationInitialized', function(event) {
-            callHook('tipeeeStreamDonationInitialized', event, false);
-        });
-
-        /*
-         * @event tipeeeStreamDonation
-         */
-        $api.on($script, 'tipeeeStreamDonation', function(event) {
-            callHook('tipeeeStreamDonation', event, false);
-        });
-
-        /*
-         * @event streamElementsDonationInitialized
-         */
-        $api.on($script, 'streamElementsDonationInitialized', function(event) {
-            callHook('streamElementsDonationInitialized', event, false);
-        });
-
-        /*
-         * @event streamElementsDonation
-         */
-        $api.on($script, 'streamElementsDonation', function(event) {
-            callHook('streamElementsDonation', event, false);
-        });
-
-        /*
-         * @event getEmotes
-         */
-        $api.on($script, 'emotesGet', function(event) {
-            callHook('emotesGet', event, false);
-        });
-
-        /*
-         * @event yTPlayerConnect
-         */
-        $api.on($script, 'yTPlayerConnect', function(event) {
-            callHook('yTPlayerConnect', event, false);
-        });
-
-        /*
-         * @event yTPlayerLoadPlaylistEvent
-         */
-        $api.on($script, 'yTPlayerLoadPlaylist', function(event) {
-            callHook('yTPlayerLoadPlaylist', event, false);
-        });
-
-        /*
-         * @event yTPlayerDisconnect
-         */
-        $api.on($script, 'yTPlayerDisconnect', function(event) {
-            callHook('yTPlayerDisconnect', event, false);
-        });
-
-        /*
-         * @event yTPlayerState
-         */
-        $api.on($script, 'yTPlayerState', function(event) {
-            callHook('yTPlayerState', event, false);
-        });
-
-        /*
-         * @event yTPlayeCurrentId
-         */
-        $api.on($script, 'yTPlayerCurrentId', function(event) {
-            callHook('yTPlayerCurrentId', event, false);
-        });
-
-        /*
-         * @event yTPlayerRequestSonglist
-         */
-        $api.on($script, 'yTPlayerRequestSonglist', function(event) {
-            callHook('yTPlayerRequestSonglist', event, false);
-        });
-
-        /*
-         * @event yTPlayerRequestPlaylist
-         */
-        $api.on($script, 'yTPlayerRequestPlaylist', function(event) {
-            callHook('yTPlayerRequestPlaylist', event, false);
-        });
-
-        /*
-         * @event yTPlayerDeleteSREvent
-         */
-        $api.on($script, 'yTPlayerDeleteSR', function(event) {
-            callHook('yTPlayerDeleteSR', event, false);
-        });
-
-        /*
-         * @event yTPlayerVolumeEvent
-         */
-        $api.on($script, 'yTPlayerVolume', function(event) {
-            callHook('yTPlayerVolume', event, false);
-        });
-
-        /*
-         * @event yTPlayerSkipSongEvent
-         */
-        $api.on($script, 'yTPlayerSkipSong', function(event) {
-            callHook('yTPlayerSkipSong', event, false);
-        });
-
-        /*
-         * @event yTPlayerStealSongEvent
-         */
-        $api.on($script, 'yTPlayerStealSong', function(event) {
-            callHook('yTPlayerStealSong', event, false);
-        });
-
-        /*
-         * @event yTPlayerSongRequestEvent
-         */
-        $api.on($script, 'yTPlayerSongRequest', function(event) {
-            callHook('yTPlayerSongRequest', event, false);
-        });
-
-        /*
-         * @event yTPlayerDeletePlaylistByIDEvent
-         */
-        $api.on($script, 'yTPlayerDeletePlaylistByID', function(event) {
-            callHook('yTPlayerDeletePlaylistByID', event, false);
-        });
-
-        /*
-         * @event yTPlayerRequestCurrentSongEvent
-         */
-        $api.on($script, 'yTPlayerRequestCurrentSong', function(event) {
-            callHook('yTPlayerRequestCurrentSong', event, false);
-        });
-
-        /*
-         * @event yTPlayerRandomizeEvent
-         */
-        $api.on($script, 'yTPlayerRandomize', function(event) {
-            callHook('yTPlayerRandomize', event, false);
-        });
-
-        /*
-         * @event yTPlayerDeleteCurrentEvent
-         */
-        $api.on($script, 'yTPlayerDeleteCurrent', function(event) {
-            callHook('yTPlayerDeleteCurrent', event, false);
-        });
-
-        /*
-         * @event twitterEvent
-         */
-        $api.on($script, 'twitter', function(event) {
-            callHook('twitter', event, false);
-        });
-
-        /*
-         * @event twitterRetweetEvent
-         */
-        $api.on($script, 'twitterRetweet', function(event) {
-            callHook('twitterRetweet', event, false);
-        });
-
-        /*
-         * @event twitchOnlineEvent
-         */
-        $api.on($script, 'twitchOnline', function(event) {
-            callHook('twitchOnline', event, false);
-        });
-
-        /*
-         * @event twitchOfflineEvent
-         */
-        $api.on($script, 'twitchOffline', function(event) {
-            callHook('twitchOffline', event, false);
-        });
-
-        /*
-         * @event twitchGameChangeEvent
-         */
-        $api.on($script, 'twitchGameChange', function(event) {
-            callHook('twitchGameChange', event, false);
-        });
-
-        /*
-         * @event twitchTitleChangeEvent
-         */
-        $api.on($script, 'twitchTitleChange', function(event) {
-            callHook('twitchTitleChange', event, false);
-        });
-
-        /*
-         * @event twitchSubscriber
-         */
-        $api.on($script, 'twitchSubscriber', function(event) {
-            callHook('twitchSubscriber', event, false);
-        });
-
-        /*
-         * @event twitchPrimeSubscriber
-         */
-        $api.on($script, 'twitchPrimeSubscriber', function(event) {
-            callHook('twitchPrimeSubscriber', event, false);
-        });
-
-        /*
-         * @event reSubscriber
-         */
-        $api.on($script, 'twitchReSubscriber', function(event) {
-            callHook('twitchReSubscriber', event, false);
-        });
-
-        /*
-         * @event twitchSubscriptionGift
-         */
-        $api.on($script, 'twitchSubscriptionGift', function(event) {
-            callHook('twitchSubscriptionGift', event, false);
-        });
-
-        /*
-         * @event twitchMassSubscriptionGifted
-         */
-        $api.on($script, 'twitchMassSubscriptionGifted', function(event) {
-            callHook('twitchMassSubscriptionGifted', event, false);
-        });
-
-        /*
-         * @event twitchAnonymousSubscriptionGift
-         */
-        $api.on($script, 'twitchAnonymousSubscriptionGift', function (event) {
-            callHook('twitchAnonymousSubscriptionGift', event, false);
-        });
-
-        /*
-         * @event twitchMassAnonymousSubscriptionGifted
-         */
-        $api.on($script, 'twitchMassAnonymousSubscriptionGifted', function (event) {
-            callHook('twitchMassAnonymousSubscriptionGifted', event, false);
-        });
-
-        /*
-         * @event twitchBits
-         */
-        $api.on($script, 'twitchBits', function(event) {
-            callHook('twitchBits', event, false);
-        });
-
-        /*
-         * @event twitchRaid
-         */
-        $api.on($script, 'twitchRaid', function(event) {
-            callHook('twitchRaid', event, false);
-        });
-
-        /*
-         * @event discordChannelMessage
-         */
-        $api.on($script, 'discordChannelMessage', function(event) {
-            callHook('discordChannelMessage', event, false);
-        });
-
-        /*
-         * @event discordChannelJoin
-         */
-        $api.on($script, 'discordChannelJoin', function(event) {
-            callHook('discordChannelJoin', event, false);
-        });
-
-        /*
-         * @event discordChannelPart
-         */
-        $api.on($script, 'discordChannelPart', function(event) {
-            callHook('discordChannelPart', event, false);
-        });
-
-        /*
-         * @event discordUserVoiceChannelJoin
-         */
-        $api.on($script, 'discordUserVoiceChannelJoin', function(event) {
-            callHook('discordUserVoiceChannelJoin', event, false);
-        });
-
-        /*
-         * @event discordUserVoiceChannelPart
-         */
-        $api.on($script, 'discordUserVoiceChannelPart', function(event) {
-            callHook('discordUserVoiceChannelPart', event, false);
-        });
-
-        /*
-         * @event discordMessageReaction
-         */
-        $api.on($script, 'discordMessageReaction', function(event) {
-            callHook('discordMessageReaction', event, false);
-        });
-
-        /*
-         * @event discordRoleCreated
-         */
-        $api.on($script, 'discordRoleCreated', function(event) {
-            callHook('discordRoleCreated', event, false);
-        });
-
-        /*
-         * @event discordRoleUpdated
-         */
-        $api.on($script, 'discordRoleUpdated', function(event) {
-            callHook('discordRoleUpdated', event, false);
-        });
-
-        /*
-         * @event discordRoleDeleted
-         */
-        $api.on($script, 'discordRoleDeleted', function(event) {
-            callHook('discordRoleDeleted', event, false);
-        });
-
-        /*
-         * @event webPanelSocketUpdate
-         */
-        $api.on($script, 'webPanelSocketUpdate', function(event) {
-            callHook('webPanelSocketUpdate', event, false);
-        });
-
-        /*
-         * @event PubSubModerationDelete
-         */
-        $api.on($script, 'PubSubModerationDelete', function (event) {
-            callHook('PubSubModerationDelete', event, false);
-        });
-
-        /*
-         * @event PubSubModerationTimeout
-         */
-        $api.on($script, 'PubSubModerationTimeout', function(event) {
-            callHook('PubSubModerationTimeout', event, false);
-        });
-
-        /*
-         * @event PubSubModerationUnTimeout
-         */
-        $api.on($script, 'PubSubModerationUnTimeout', function(event) {
-            callHook('PubSubModerationUnTimeout', event, false);
-        });
-
-        /*
-         * @event PubSubModerationBan
-         */
-        $api.on($script, 'PubSubModerationBan', function(event) {
-            callHook('PubSubModerationBan', event, false);
-        });
-
-        /*
-         * @event PubSubModerationUnBan
-         */
-        $api.on($script, 'PubSubModerationUnBan', function(event) {
-            callHook('PubSubModerationUnBan', event, false);
-        });
+            callHook('discordGuildCreate', event, false);
+        });
+        loadedHooks.push('discordGuildCreate');
+
+        var hookNames = $api.getEventNames();
+        for (var i = 0; i < hookNames.size(); i++) {
+            var hookName = String(hookNames.get(i) + '');
+            if (!loadedHooks.includes(hookName)) {
+                $api.on($script, hookName, function (event) {
+                    var hookname = String($api.formatEventName(event.getClass().getSimpleName()) + '');
+                    callHook(hookname, event, false);
+                });
+                loadedHooks.push(hookName);
+            }
+        }
     }
 
     // Export functions to API
@@ -1104,7 +703,6 @@
         loadScriptRecursive: loadScriptRecursive,
         isModuleEnabled: isModuleEnabled,
         isModuleLoaded: isModuleLoaded,
-        getModuleIndex: getModuleIndex,
         getHookIndex: getHookIndex,
         loadScript: loadScript,
         getModule: getModule,

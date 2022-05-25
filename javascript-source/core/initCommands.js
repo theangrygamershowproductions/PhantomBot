@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
 
 (function() {
     var bot = $.botName.toLowerCase();
+    var sentReady = false;
 
     /*
      * @event command
@@ -39,7 +40,7 @@
              * @commandpath botName disconnect - Removes the bot from your channel.
              */
             if (action.equalsIgnoreCase('disconnect')) {
-                $.say($.whisperPrefix(sender) + $.lang.get('init.disconnect', 'irc-ws.chat.twitch.tv'));
+                $.say($.whisperPrefix(sender) + $.lang.get('init.disconnect'));
 
                 setTimeout(function() {
                     java.lang.System.exit(0);
@@ -47,10 +48,39 @@
             }
 
             /*
+             * @commandpath botName reconnect - Reconnects the bot to TMI, Host TMI, and PubSub.
+             */
+            if (action.equalsIgnoreCase('reconnect')) {
+                $.say($.whisperPrefix(sender) + $.lang.get('init.reconnect'));
+
+                setTimeout(function() {
+                    Packages.tv.phantombot.PhantomBot.instance().reconnect();
+                }, 1000);
+            }
+
+            /*
              * @commandpath botName moderate - Forces the bot to detect its moderator status.
              */
             if (action.equalsIgnoreCase('moderate')) {
-                $.session.getModerationStatus();
+                Packages.tv.phantombot.PhantomBot.instance().getSession().getModerationStatus();
+            }
+
+            /*
+             * @commandpath botName forceonline - Forces the bot to mark the channel as online.
+             */
+            if (action.equalsIgnoreCase('forceonline')) {
+                $.say($.whisperPrefix(sender) + $.lang.get('init.forceonline'));
+
+                Packages.tv.phantombot.event.EventBus.instance().postAsync(new Packages.tv.phantombot.event.twitch.online.TwitchOnlineEvent());
+            }
+
+            /*
+             * @commandpath botName forceoffline - Forces the bot to mark the channel as offline.
+             */
+            if (action.equalsIgnoreCase('forceoffline')) {
+                $.say($.whisperPrefix(sender) + $.lang.get('init.forceoffline'));
+
+                Packages.tv.phantombot.event.EventBus.instance().postAsync(new Packages.tv.phantombot.event.twitch.offline.TwitchOfflineEvent());
             }
 
             /*
@@ -120,6 +150,25 @@
         if (command.equalsIgnoreCase('module')) {
             if (action === undefined) {
                 $.say($.whisperPrefix(sender) + $.lang.get('init.module.usage'));
+                return;
+            }
+
+            /*
+             * @commandpath module reload [path/all (option)] - Force reloads all active modules or force reloads a single module.
+             */
+            if (action.equalsIgnoreCase('reload')) {
+                if (subAction === undefined || subAction.equalsIgnoreCase('all')) {
+                    $.bot.loadScriptRecursive('', false, true);
+                    $.say($.whisperPrefix(sender) + $.lang.get('init.module.reload.all'));
+                    return;
+                }
+                if ($.getIniDbString('modules', subAction, undefined) !== undefined){
+                    $.bot.loadScript(subAction, true, false);
+                    $.say($.whisperPrefix(sender) + $.lang.get('init.module.reload', subAction));
+                    return;
+                }
+
+                $.say($.whisperPrefix(sender) + $.lang.get('init.module.reload.usage'));
                 return;
             }
 
@@ -215,6 +264,8 @@
                         $.say($.whisperPrefix(sender) + $.lang.get('init.module.enabled', module.getModuleName()));
                     } catch (ex) {
                         $.log.error('Unable to call initReady for enabled module (' + module.scriptName + '): ' + ex);
+                        $.consoleLn("Sending stack trace to error log...");
+                        Packages.com.gmt2001.Console.err.printStackTrace(ex.javaException);
                     }
                 } else {
                     $.say($.whisperPrefix(sender) + $.lang.get('init.module.404'));
@@ -286,6 +337,8 @@
                         }
                     } catch (ex) {
                         $.log.error('Unable to call initReady for enabled module (' + module.scriptName + '): ' + ex);
+                        $.consoleLn("Sending stack trace to error log...");
+                        Packages.com.gmt2001.Console.err.printStackTrace(ex.javaException);
                     }
                 }
             }
@@ -328,7 +381,7 @@
          */
         if (command.equalsIgnoreCase('reconnect')) {
             if ($.isBot(sender)) {
-                $.session.reconnect();
+                Packages.tv.phantombot.PhantomBot.instance().reconnect();
             }
         }
 
@@ -364,9 +417,18 @@
         $.registerChatSubcommand(bot, 'disconnect', 1);
         $.registerChatSubcommand(bot, 'reconnect', 1);
         $.registerChatSubcommand(bot, 'moderate', 2);
+        $.registerChatSubcommand(bot, 'forceonline', 2);
+        $.registerChatSubcommand(bot, 'forceoffline', 2);
+        $.registerChatSubcommand(bot, 'setconnectmessage', 1);
+        $.registerChatSubcommand(bot, 'removeconnectmessage', 1);
+        $.registerChatSubcommand(bot, 'togglepricecommods', 1);
+        $.registerChatSubcommand(bot, 'togglepermcommessage', 1);
+        $.registerChatSubcommand(bot, 'togglepricecommessage', 1);
+        $.registerChatSubcommand(bot, 'togglecooldownmessage', 1);
 
         // Say the connected message.
-        if ($.inidb.exists('settings', 'connectedMsg')) {
+        if (!sentReady && $.inidb.exists('settings', 'connectedMsg')) {
+            sentReady = true;
             $.say($.inidb.get('settings', 'connectedMsg'));
         }
     });

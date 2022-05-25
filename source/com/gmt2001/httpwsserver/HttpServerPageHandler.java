@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,6 +16,7 @@
  */
 package com.gmt2001.httpwsserver;
 
+import com.gmt2001.PathValidator;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
@@ -26,20 +27,25 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.util.CharsetUtil;
 import java.io.IOException;
+import java.net.URLDecoder;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
-import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Stream;
 
 /**
  * Processes HTTP requests and passes successful ones to the appropriate registered final handler
@@ -76,13 +82,15 @@ public class HttpServerPageHandler extends SimpleChannelInboundHandler<FullHttpR
             return;
         }
 
-        HttpRequestHandler h = determineHttpRequestHandler(req.uri());
+        QueryStringDecoder qsd = new QueryStringDecoder(req.uri());
+        HttpRequestHandler h = determineHttpRequestHandler(qsd.path());
 
         if (h != null) {
             if (h.getAuthHandler().checkAuthorization(ctx, req)) {
                 h.handleRequest(ctx, req);
             }
         } else {
+            com.gmt2001.Console.debug.println("404 " + req.method().asciiName() + ": " + qsd.path());
             sendHttpResponse(ctx, req, prepareHttpResponse(HttpResponseStatus.NOT_FOUND, null, null));
         }
     }
@@ -108,7 +116,7 @@ public class HttpServerPageHandler extends SimpleChannelInboundHandler<FullHttpR
     static HttpRequestHandler determineHttpRequestHandler(String uri) {
         String bestMatch = "";
 
-        if (uri.contains("..")) {
+        if (URLDecoder.decode(uri, Charset.forName("UTF-8")).contains("..")) {
             return null;
         }
 
@@ -243,6 +251,9 @@ public class HttpServerPageHandler extends SimpleChannelInboundHandler<FullHttpR
             HttpUtil.setContentLength(res, res.content().readableBytes());
         }
 
+        res.headers().set(HttpHeaderNames.CACHE_CONTROL, HttpHeaderValues.NO_STORE);
+        res.headers().add(HttpHeaderNames.CACHE_CONTROL, HttpHeaderValues.MAX_AGE + "=" + HttpHeaderValues.ZERO);
+
         return res;
     }
 
@@ -298,24 +309,17 @@ public class HttpServerPageHandler extends SimpleChannelInboundHandler<FullHttpR
      * @param p The {@link Path} to the file or directory to check
      * @param directoryAllowed Indicates if directories are allowed. If set to {@code false}, will cause a {@code 403 FORBIDDEN} if {@code p} is a
      * directory
-     * @return {@code true} if the file is valid, not hidden, not a symlink, and is readable. {@code true} if {@code directoryAllowed} is {@code true}
+     * @return
      * and passed the same tests. {@code false} otherwise
      */
     public static boolean checkFilePermissions(ChannelHandlerContext ctx, FullHttpRequest req, Path p, boolean directoryAllowed) {
-        try {
-            if (!Files.exists(p, LinkOption.NOFOLLOW_LINKS)) {
-                com.gmt2001.Console.debug.println("404: " + p.toString());
-                HttpServerPageHandler.sendHttpResponse(ctx, req, HttpServerPageHandler.prepareHttpResponse(HttpResponseStatus.NOT_FOUND, null, null));
-                return false;
-            } else if (Files.isHidden(p) || Files.isSymbolicLink(p) || !Files.isReadable(p) || (Files.isDirectory(p, LinkOption.NOFOLLOW_LINKS) && !directoryAllowed)) {
-                com.gmt2001.Console.debug.println("403: " + p.toString());
-                HttpServerPageHandler.sendHttpResponse(ctx, req, HttpServerPageHandler.prepareHttpResponse(HttpResponseStatus.FORBIDDEN, null, null));
-                return false;
-            }
-        } catch (IOException ex) {
-            com.gmt2001.Console.debug.println("500: " + p.toString());
-            com.gmt2001.Console.debug.printStackTrace(ex);
-            HttpServerPageHandler.sendHttpResponse(ctx, req, HttpServerPageHandler.prepareHttpResponse(HttpResponseStatus.INTERNAL_SERVER_ERROR, null, null));
+        if (!Files.exists(p)) {
+            com.gmt2001.Console.debug.println("404: " + p.toString());
+            HttpServerPageHandler.sendHttpResponse(ctx, req, HttpServerPageHandler.prepareHttpResponse(HttpResponseStatus.NOT_FOUND, null, null));
+            return false;
+        } else if (!PathValidator.isValidPathWebAuth(p.toString()) || (Files.isDirectory(p) && !directoryAllowed)) {
+            com.gmt2001.Console.debug.println("403: " + p.toString());
+            HttpServerPageHandler.sendHttpResponse(ctx, req, HttpServerPageHandler.prepareHttpResponse(HttpResponseStatus.FORBIDDEN, null, null));
             return false;
         }
 
@@ -349,6 +353,40 @@ public class HttpServerPageHandler extends SimpleChannelInboundHandler<FullHttpR
      */
     public static void deregisterHttpHandler(String path) {
         httpRequestHandlers.remove(path);
+    }
+
+    /**
+     * Parses out cookies and converts them to a Map
+     *
+     * @param req The {@link FullHttpRequest} containing the request
+     * @return A Map of cookies
+     */
+    public static Map<String, String> parseCookies(HttpHeaders headers) {
+        Map<String, String> cookies = new HashMap<>();
+
+        headers.getAll("Cookie").stream().forEach(hcookie -> Arrays.asList(hcookie.split("; ")).stream().forEach(scookie -> {
+            String[] cookie = scookie.split("=", 2);
+            cookies.put(cookie[0], cookie[1]);
+        }));
+
+        return cookies;
+    }
+
+    /**
+     * Parses out post data and converts it to a Map
+     *
+     * @param req The {@link FullHttpRequest} containing the request
+     * @return A Map of post data
+     */
+    public static Map<String, String> parsePost(FullHttpRequest req) {
+        Map<String, String> post = new HashMap<>();
+
+        Stream.of(req.content().toString(Charset.defaultCharset()).split("&")).forEach(ppost -> {
+            String[] spost = ppost.split("=", 2);
+            post.put(spost[0], URLDecoder.decode(spost[1], Charset.defaultCharset()));
+        });
+
+        return post;
     }
 
 }

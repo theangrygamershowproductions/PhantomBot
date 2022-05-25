@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@ public class YTPlayerSongRequestEvent extends YTPlayerEvent {
     /**
      * Class constructor.
      *
-     * @param {String} search
+     * @param search
      */
     public YTPlayerSongRequestEvent(String search) {
         this.search = search;
@@ -31,7 +31,7 @@ public class YTPlayerSongRequestEvent extends YTPlayerEvent {
     /**
      * Method that returns the user's search.
      *
-     * @return {String} search
+     * @return search
      */
     public String getSearch() {
         return this.search;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,19 +17,15 @@
 package tv.phantombot.cache;
 
 import com.scaniatv.StreamElementsAPIv2;
-
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
-
 import org.json.JSONArray;
 import org.json.JSONObject;
-
 import tv.phantombot.PhantomBot;
 import tv.phantombot.event.EventBus;
-
 import tv.phantombot.event.streamelements.donate.StreamElementsDonationEvent;
 import tv.phantombot.event.streamelements.donate.StreamElementsDonationInitializedEvent;
 
@@ -37,24 +33,23 @@ public class StreamElementsCache implements Runnable {
 
     private static final Map<String, StreamElementsCache> instances = new ConcurrentHashMap<>();
     private final Thread updateThread;
-    private final String channel;
     private Map<String, JSONObject> cache = new ConcurrentHashMap<>();
     private Date timeoutExpire = new Date();
     private Date lastFail = new Date();
-    private Boolean firstUpdate = true;
-    private Boolean killed = false;
+    private boolean firstUpdate = true;
+    private boolean killed = false;
     private int numfail = 0;
 
     /**
      * Used to call and start this instance.
      *
-     * @param {String}  channel  Channel to run the cache for.
+     * @param channel Channel to run the cache for.
      */
     public static StreamElementsCache instance(String channel) {
         StreamElementsCache instance = instances.get(channel);
 
         if (instance == null) {
-            instance = new StreamElementsCache(channel);
+            instance = new StreamElementsCache();
             instances.put(channel, instance);
         }
         return instance;
@@ -63,10 +58,10 @@ public class StreamElementsCache implements Runnable {
     /**
      * Starts this class on a new thread.
      *
-     * @param {String}  channel  Channel to run the cache for.
+     * @param channel Channel to run the cache for.
      */
-    private StreamElementsCache(String channel) {
-        this.channel = channel;
+    @SuppressWarnings("CallToThreadStartDuringObjectConstruction")
+    private StreamElementsCache() {
         this.updateThread = new Thread(this, "tv.phantombot.cache.StreamElementsCache");
 
         Thread.setDefaultUncaughtExceptionHandler(com.gmt2001.UncaughtExceptionHandler.instance());
@@ -78,7 +73,7 @@ public class StreamElementsCache implements Runnable {
     /**
      * Checks if the donation has been cached.
      *
-     * @return {Boolean}
+     * @return
      */
     public boolean exists(String donationID) {
         return cache.containsKey(donationID);
@@ -87,7 +82,7 @@ public class StreamElementsCache implements Runnable {
     /**
      * Returns the current cache count (size/length),
      *
-     * @return {Integer}
+     * @return
      */
     public int count() {
         return cache.size();
@@ -122,16 +117,12 @@ public class StreamElementsCache implements Runnable {
 
         while (!killed) {
             try {
-                try {
-                    if (new Date().after(timeoutExpire)) {
-                        this.updateCache();
-                    }
-                } catch (Exception ex) {
-                    checkLastFail();
-                    com.gmt2001.Console.debug.println("StreamElementsCache.run: Failed to update donations: " + ex.getMessage());
+                if (new Date().after(timeoutExpire)) {
+                    this.updateCache();
                 }
             } catch (Exception ex) {
-                com.gmt2001.Console.err.println("StreamElementsCache.run: Failed to update donations: " + ex.getMessage());
+                checkLastFail();
+                com.gmt2001.Console.err.printStackTrace(ex);
             }
 
             try {
@@ -169,22 +160,19 @@ public class StreamElementsCache implements Runnable {
                     com.gmt2001.Console.err.println("StreamElementsCache.updateCache: Bad JWT token disabling the StreamElements module.");
                     PhantomBot.instance().getDataStore().SetString("modules", "", "./handlers/streamElementsHandler.js", "false");
                     killed = true;
-                } else {
-                    throw new Exception("Failed to get donations: " + jsonResult);
                 }
             }
-        } else {
-            throw new Exception("[" + jsonResult.getString("_exception") + "] " + jsonResult.getString("_exceptionMessage"));
         }
 
         if (firstUpdate && !killed) {
             firstUpdate = false;
-            EventBus.instance().post(new StreamElementsDonationInitializedEvent());
+            EventBus.instance().postAsync(new StreamElementsDonationInitializedEvent());
         }
 
         if (donations != null && !killed) {
             for (int i = 0; i < donations.length(); i++) {
-                if (cache == null || !cache.containsKey(donations.getJSONObject(i).getString("_id"))) {
+                if ((cache == null || !cache.containsKey(donations.getJSONObject(i).getString("_id")))
+                        && !PhantomBot.instance().getDataStore().exists("donations", donations.getJSONObject(i).getString("_id"))) {
                     EventBus.instance().postAsync(new StreamElementsDonationEvent(donations.getJSONObject(i).toString()));
                 }
             }
@@ -196,7 +184,7 @@ public class StreamElementsCache implements Runnable {
     /**
      * Sets the current cache.
      *
-     * @param {Map}  Cache
+     * @param Cache
      */
     public void setCache(Map<String, JSONObject> cache) {
         this.cache = cache;
@@ -205,7 +193,7 @@ public class StreamElementsCache implements Runnable {
     /**
      * Returns the current cache.
      *
-     * @return {Map} Current cache.
+     * @return Current cache.
      */
     public Map<String, JSONObject> getCache() {
         return cache;

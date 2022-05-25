@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,13 +15,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-(function() {
+(function () {
     var currentHostTarget = '',
-        respond = getSetIniDbBoolean('settings', 'response_@chat', true),
-        action = getSetIniDbBoolean('settings', 'response_action', false),
-        secureRandom = new java.security.SecureRandom(),
-        reg = new RegExp(/^@\w+,\s?$/),
-        timeout = 0;
+            respond = getSetIniDbBoolean('settings', 'response_@chat', true),
+            action = getSetIniDbBoolean('settings', 'response_action', false),
+            secureRandom = new java.security.SecureRandom(),
+            reg = new RegExp(/^@\w+,\s?$/),
+            timeout = 0;
 
     /*
      * @function reloadMisc
@@ -63,7 +63,7 @@
      * @function getMessageWrites
      */
     function getMessageWrites() {
-        return parseInt($.session.getWrites());
+        return parseInt(Packages.tv.phantombot.PhantomBot.instance().getSession().getWrites());
     }
 
     /**
@@ -167,14 +167,14 @@
         }
 
         if (respond && !action) {
-            $.session.say(message);
+            Packages.tv.phantombot.PhantomBot.instance().getSession().say(message);
         } else {
             if (respond && action) {
                 // If the message is a Twitch command, remove the /me.
                 if (message.startsWith('.') || message.startsWith('/')) {
-                    $.session.say(message);
+                    Packages.tv.phantombot.PhantomBot.instance().getSession().say(message);
                 } else {
-                    $.session.say('/me ' + message);
+                    Packages.tv.phantombot.PhantomBot.instance().getSession().say('/me ' + message);
                 }
             }
             if (!respond) {
@@ -187,7 +187,7 @@
     }
 
     /**
-     * @function say
+     * @function sayWithTimeout
      * @export $
      * @param {string} message
      * @param {boolean} run
@@ -300,42 +300,42 @@
 
         try {
             var HttpRequest = Packages.com.gmt2001.HttpRequest,
-                HashMap = Packages.java.util.HashMap,
-                JSONObject = Packages.org.json.JSONObject,
-                json = new JSONObject('{}'),
-                parameters = new JSONObject('{}'),
-                header = new HashMap(1),
-                id = rand(65535),
-                request;
+                    HashMap = Packages.java.util.HashMap,
+                    JSONObject = Packages.org.json.JSONObject,
+                    json = new JSONObject('{}'),
+                    parameters = new JSONObject('{}'),
+                    header = new HashMap(1),
+                    id = rand(65535),
+                    request;
 
             header.put('Content-Type', 'application/json-rpc');
 
             parameters
-                .put('apiKey', '0d710311-5840-45dd-be83-82904de87c5d')
-                .put('n', 1)
-                .put('min', min)
-                .put('max', max)
-                .put('replacement', true)
-                .put('base', 10);
+                    .put('apiKey', '0d710311-5840-45dd-be83-82904de87c5d')
+                    .put('n', 1)
+                    .put('min', min)
+                    .put('max', max)
+                    .put('replacement', true)
+                    .put('base', 10);
 
             json
-                .put('jsonrpc', '2.0')
-                .put('method', 'generateIntegers')
-                .put('params', parameters)
-                .put('id', id);
+                    .put('jsonrpc', '2.0')
+                    .put('method', 'generateIntegers')
+                    .put('params', parameters)
+                    .put('id', id);
 
             request = HttpRequest.getData(
-                HttpRequest.RequestType.GET,
-                'https://api.random.org/json-rpc/1/invoke',
-                json.toString(),
-                header
-            );
+                    HttpRequest.RequestType.GET,
+                    'https://api.random.org/json-rpc/1/invoke',
+                    json.toString(),
+                    header
+                    );
 
             if (request.success) {
                 var data = new JSONObject(request.content)
-                    .getJSONObject('result')
-                    .getJSONObject('random')
-                    .getJSONArray('data');
+                        .getJSONObject('result')
+                        .getJSONObject('random')
+                        .getJSONArray('data');
 
                 if (data.length() > 0) {
                     return data.getInt(0);
@@ -386,7 +386,7 @@
      * @returns {boolean}
      */
     function outOfRange(number, min, max) {
-        return (number < min && number > max);
+        return (number < min || number > max);
     }
 
     /**
@@ -397,7 +397,7 @@
      */
     function getOrdinal(number) {
         var s = ["th", "st", "nd", "rd"],
-            v = number % 100;
+                v = number % 100;
         return (number + (s[(v - 20) % 10] || s[v] || s[0]));
     }
 
@@ -597,10 +597,10 @@
      */
     function paginateArray(array, langKey, sep, whisper, sender, display_page) {
         var idx,
-            output = '',
-            maxlen,
-            hasNoLang = langKey.startsWith('NULL'),
-            pageCount = 0;
+                output = '',
+                maxlen,
+                hasNoLang = langKey.startsWith('NULL'),
+                pageCount = 0;
 
         if (display_page === undefined) {
             display_page = 0;
@@ -654,10 +654,10 @@
      */
     function paginateArrayDiscord(array, langKey, sep, channel, sender, display_page) {
         var idx,
-            output = '',
-            maxlen,
-            hasNoLang = langKey.startsWith('NULL'),
-            pageCount = 0;
+                output = '',
+                maxlen,
+                hasNoLang = langKey.startsWith('NULL'),
+                pageCount = 0;
 
         if (display_page === undefined) {
             display_page = 0;
@@ -691,20 +691,69 @@
     }
 
     /**
+     * Taken from: https://jsperf.com/replace-vs-split-join-vs-replaceall/95s
+     *
+     * Implementation of string.replaceAll
+     *
      * @function replace
      * @export $
      * @param {string}
      */
-    function replace(string, find, replace) {
-        if (find.equals(replace)) {
-            return string;
+    function replace(str, from, to) {
+        var idx, parts = [], l = from.length, prev = 0;
+        for (; ~(idx = str.indexOf(from, prev)); ) {
+            parts.push(str.slice(prev, idx), to);
+            prev = idx + l;
         }
+        parts.push(str.slice(prev));
+        return parts.join('');
+    }
 
-        while (string.indexOf(find) >= 0) {
-            string = string.replace(find, (replace + ''));
+    /**
+     * Taken from: https://github.com/tc39/proposal-string-matchall
+     *
+     * Implementation of string.matchAll
+     *
+     * @function matchAll
+     * @export $
+     * @param {type} str
+     * @param {type} regex
+     * @returns {Array}
+     */
+    function matchAll(str, regex) {
+        regex.lastIndex = 0;
+        var matches = [];
+        str.replace(regex, function () {
+            var match = Array.prototype.slice.call(arguments, 0, -2);
+            match.input = arguments[arguments.length - 1];
+            match.index = arguments[arguments.length - 2];
+            matches.push(match);
+        });
+
+        return matches;
+    }
+
+    function match(str, regex) {
+        regex.lastIndex = 0;
+        return str.match(regex);
+    }
+
+    function test(str, regex) {
+        regex.lastIndex = 0;
+        try {
+            return regex.test(str);
+        } catch (e) {
+            if (e.indexOf('Cannot find function test') >= 0) {
+                return $.javaString(str).contains(regex);
+            } else {
+                throw e;
+            }
         }
+    }
 
-        return string;
+    function regexExec(str, regex) {
+        regex.lastIndex = 0;
+        return regex.exec(str);
     }
 
     /**
@@ -717,6 +766,29 @@
             return '@' + $.username.resolve(username) + ' ';
         }
         return '@' + $.username.resolve(username) + ', ';
+    }
+
+    function javaString(str) {
+        if (str === null || str === undefined) {
+            return null;
+        }
+        try {
+            return new Packages.java.lang.String(str);
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function jsString(str) {
+        if (str === null || str === undefined) {
+            return null;
+        }
+
+        try {
+            return String(str + '');
+        } catch (e) {
+            return null;
+        }
     }
 
     /** Export functions to API */
@@ -755,6 +827,10 @@
     $.trueRandRange = trueRandRange;
     $.paginateArray = paginateArray;
     $.replace = replace;
+    $.matchAll = matchAll;
+    $.match = match;
+    $.test = test;
+    $.regexExec = regexExec;
     $.userPrefix = userPrefix;
     $.reloadMisc = reloadMisc;
     $.hasKey = hasKey;
@@ -763,4 +839,6 @@
     $.sayWithTimeout = sayWithTimeout;
     $.paginateArrayDiscord = paginateArrayDiscord;
     $.equalsIgnoreCase = equalsIgnoreCase;
+    $.javaString = javaString;
+    $.jsString = jsString;
 })();

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,38 +22,21 @@
  */
 
 var setTimeout,
-    clearTimeout,
-    setInterval,
-    clearInterval;
+        clearTimeout,
+        setInterval,
+        clearInterval;
 
-(function() {
-    var counter = 1,
-        registry = {};
-
+(function () {
     /**
      * @function setTimeout
      * @param {Function} fn
      * @param {Number} delay
      * @param {String} name
-
+     *
      * @returns {Number}
-    */
-    setTimeout = function(fn, delay, name) {
-        var id = counter++,
-            timer;
-
-        if (name !== undefined) {
-            timer = new java.util.Timer(name);
-        } else {
-            timer = new java.util.Timer();
-        }
-
-        registry[id] = new JavaAdapter(java.util.TimerTask, {
-            run: fn
-        });
-        timer.schedule(registry[id], delay);
-
-        return id;
+     */
+    setTimeout = function (fn, delay, name) {
+        return Packages.com.gmt2001.JSTimers.instance().setTimeout(fn, delay, name);
     };
 
     /**
@@ -64,43 +47,20 @@ var setTimeout,
      *
      * @returns {Number}
      */
-    setInterval = function(fn, interval, name) {
-        var id = counter++,
-            timer;
-
-        if (name !== undefined) {
-            timer = new java.util.Timer(name);
-        } else {
-            timer = new java.util.Timer();
-        }
-
-        registry[id] = new JavaAdapter(java.util.TimerTask, {
-            run: fn
-        });
-        timer.schedule(registry[id], interval, interval);
-
-        return id;
+    setInterval = function (fn, interval, name) {
+        return Packages.com.gmt2001.JSTimers.instance().setInterval(fn, interval, name);
     };
 
     /**
      * @function clearTimeout
      * @param {Number} id
      */
-    clearTimeout = function(id) {
-        if (id == undefined) {
+    clearTimeout = function (id) {
+        if (id === undefined || id === null) {
             return;
         }
 
-        if (registry[id] != undefined) {
-            try {
-                registry[id].cancel();
-            } catch (ex) {
-                // Cannot cancel since timer is already over.
-                // Ignore this.
-            }
-        }
-
-        delete registry[id];
+        Packages.com.gmt2001.JSTimers.instance().clearTimer(id);
     };
 
     /**

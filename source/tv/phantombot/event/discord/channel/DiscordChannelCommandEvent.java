@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,10 +17,9 @@
 
 package tv.phantombot.event.discord.channel;
 
-import discord4j.core.object.entity.Channel;
 import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.User;
-
+import discord4j.core.object.entity.channel.Channel;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -33,11 +32,11 @@ public class DiscordChannelCommandEvent extends DiscordChannelEvent {
     /**
      * Class constructor for this event.
      *
-     * @param {IUser}    user
-     * @param {IChannel} channel
-     * @param {String}   command
-     * @param {String}   arguments
-     * @param {boolean}  isAdmin
+     * @param    user
+     * @param channel
+     * @param   command
+     * @param   arguments
+     * @param  isAdmin
      */
     public DiscordChannelCommandEvent(User user, Channel channel, Message message, String command, String arguments, boolean isAdmin) {
         super(user, channel, message);
@@ -51,11 +50,11 @@ public class DiscordChannelCommandEvent extends DiscordChannelEvent {
     /**
      * Method that parses the command arguments.
      *
-     * @return {String[]}
+     * @return
      */
     private String[] parse() {
-        List<String> tempArgs = new LinkedList<String>();
-        Boolean hasQuote = false;
+        List<String> tempArgs = new LinkedList<>();
+        boolean hasQuote = false;
         String tempString = "";
 
         for (char c : arguments.toCharArray()) {
@@ -81,7 +80,7 @@ public class DiscordChannelCommandEvent extends DiscordChannelEvent {
     /**
      * Method that sets the command for this class. Mostly used for aliases.
      *
-     * @return {String} command
+     * @return command
      */
     public String setCommand(String command) {
         this.command = command;
@@ -91,7 +90,7 @@ public class DiscordChannelCommandEvent extends DiscordChannelEvent {
     /**
      * Method that returns the command.
      *
-     * @return {String} command
+     * @return command
      */
     public String getCommand() {
         return this.command.toLowerCase();
@@ -100,7 +99,7 @@ public class DiscordChannelCommandEvent extends DiscordChannelEvent {
     /**
      * Method that returns the string of arguments.
      *
-     * @return {String} arguments
+     * @return arguments
      */
     public String getArguments() {
         return this.arguments;
@@ -109,7 +108,7 @@ public class DiscordChannelCommandEvent extends DiscordChannelEvent {
     /**
      * Method that returns the array of arguments
      *
-     * @return {String[]} args
+     * @return args
      */
     public String[] getArgs() {
         return this.args;
@@ -127,7 +126,7 @@ public class DiscordChannelCommandEvent extends DiscordChannelEvent {
     /**
      * Method that returns this object as a string.
      *
-     * @return {String}
+     * @return
      */
     @Override
     public String toString() {

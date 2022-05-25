@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,13 +17,14 @@
 package tv.phantombot.twitch.irc.chat.utils;
 
 public class Message {
+
     private final String message;
     private final boolean hasPriority;
 
     /**
      * Class constructor.
      *
-     * @param {String} message
+     * @param message
      */
     public Message(String message) {
         this.message = message;
@@ -33,8 +34,8 @@ public class Message {
     /**
      * Class constructor.
      *
-     * @param {String} message
-     * @param {boolean} hasPriority
+     * @param message
+     * @param hasPriority
      */
     public Message(String message, boolean hasPriority) {
         this.message = message;
@@ -44,7 +45,7 @@ public class Message {
     /**
      * Method that returns the message.
      *
-     * @return {String} message
+     * @return message
      */
     public String getMessage() {
         return this.message;
@@ -53,7 +54,7 @@ public class Message {
     /**
      * Method that returns if the message has priority.
      *
-     * @return {boolean} hasPriority
+     * @return hasPriority
      */
     public boolean hasPriority() {
         return this.hasPriority;

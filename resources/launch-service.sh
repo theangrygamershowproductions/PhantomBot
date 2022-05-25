@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright (C) 2016-2019 phantombot.tv
+# Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -27,6 +27,7 @@
 unset DISPLAY
 
 tmp=""
+pwd=""
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
     SOURCE="${BASH_SOURCE[0]}"
@@ -37,9 +38,11 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     done
     DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
     cd "$DIR"
+    pwd="$DIR"
     JAVA="./java-runtime-macos/bin/java"
 elif [[ "$MACHTYPE" != "x86_64"* ]]; then
     cd $(dirname $(readlink -f $0))
+    pwd=$(dirname $(readlink -f $0))
     osdist=$(awk '/^ID(_LIKE)?=/' /etc/os-release | sed 's/"//g' | sort --field-separator== --key=1,1 --dictionary-order --reverse | cut -d = -f 2 | awk 'FNR == 1')
     osdist2=$(awk '/^ID(_LIKE)?=/' /etc/os-release | sed 's/"//g' | sort --field-separator== --key=1,1 --dictionary-order --reverse | cut -d = -f 2 | awk 'FNR == 2')
     osver=$(awk '/^VERSION_ID=/' /etc/os-release | sed 's/"//g' | cut -d = -f 2)
@@ -107,6 +110,7 @@ elif [[ "$MACHTYPE" != "x86_64"* ]]; then
     fi
 else
     cd $(dirname $(readlink -f $0))
+    pwd=$(dirname $(readlink -f $0))
     JAVA="./java-runtime-linux/bin/java"
 fi
 
@@ -123,4 +127,12 @@ if [[ ! -x "${JAVA}" ]]; then
     exit 1
 fi
 
-${JAVA} --add-opens java.base/java.lang=ALL-UNNAMED ${tmp} -Djava.security.policy=config/security -Xms1m -Dfile.encoding=UTF-8 -jar PhantomBot.jar ${1}
+if [[ ! -O "PhantomBot.jar" ]]; then
+    echo "The directory is not chown by the service user"
+    echo "Please run the following command to fix this:"
+    echo "   sudo chown ${EUID} ${pwd}"
+
+    exit 1
+fi
+
+${JAVA} --add-exports java.base/sun.security.x509=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED ${tmp} -Duser.language=en -Djava.security.policy=config/security -Xms1m -Dfile.encoding=UTF-8 -jar PhantomBot.jar "$@"

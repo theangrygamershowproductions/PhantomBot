@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -57,7 +57,6 @@
         spamTrackerTime = $.getSetIniDbNumber('chatModerator', 'spamTrackerTime', 30),
         spamTrackerLimit = $.getSetIniDbNumber('chatModerator', 'spamTrackerLimit', 30),
 
-        blacklistTimeoutTime = $.getSetIniDbNumber('chatModerator', 'blacklistTimeoutTime', 600),
         blacklistMessage = $.getSetIniDbString('chatModerator', 'blacklistMessage', 'you were timed out for using a blacklisted phrase.'),
         blacklistMessageBan = $.getSetIniDbString('chatModerator', 'blacklistMessageBan', 'you were banned for using a blacklisted phrase.'),
 
@@ -73,7 +72,7 @@
             Colors: $.getSetIniDbBoolean('chatModerator', 'subscribersModerateColors', true),
             LongMsg: $.getSetIniDbBoolean('chatModerator', 'subscribersModerateLongMsg', true),
             SpamTracker: $.getSetIniDbBoolean('chatModerator', 'subscribersModerateSpamTracker', true),
-            FakePurge: $.getSetIniDbBoolean('chatModerator', 'subscribersModerateFakePurge', true),
+            FakePurge: $.getSetIniDbBoolean('chatModerator', 'subscribersModerateFakePurge', true)
         },
 
         regulars = {
@@ -85,7 +84,19 @@
             Colors: $.getSetIniDbBoolean('chatModerator', 'regularsModerateColors', true),
             LongMsg: $.getSetIniDbBoolean('chatModerator', 'regularsModerateLongMsg', true),
             SpamTracker: $.getSetIniDbBoolean('chatModerator', 'regularsModerateSpamTracker', true),
-            FakePurge: $.getSetIniDbBoolean('chatModerator', 'regularsModerateFakePurge', true),
+            FakePurge: $.getSetIniDbBoolean('chatModerator', 'regularsModerateFakePurge', true)
+        },
+
+        vips = {
+            Links: $.getSetIniDbBoolean('chatModerator', 'vipsModerateLinks', true),
+            Caps: $.getSetIniDbBoolean('chatModerator', 'vipsModerateCaps', true),
+            Symbols: $.getSetIniDbBoolean('chatModerator', 'vipsModerateSymbols', true),
+            Spam: $.getSetIniDbBoolean('chatModerator', 'vipsModerateSpam', true),
+            Emotes: $.getSetIniDbBoolean('chatModerator', 'vipsModerateEmotes', true),
+            Colors: $.getSetIniDbBoolean('chatModerator', 'vipsModerateColors', true),
+            LongMsg: $.getSetIniDbBoolean('chatModerator', 'vipsModerateLongMsg', true),
+            SpamTracker: $.getSetIniDbBoolean('chatModerator', 'vipsModerateSpamTracker', true),
+            FakePurge: $.getSetIniDbBoolean('chatModerator', 'vipsModerateFakePurge', true)
         },
 
         silentTimeout = {
@@ -108,7 +119,7 @@
             LongMessage: $.getSetIniDbString('chatModerator', 'silentLongMessage', 'Excessive message length. (Automated by ' + $.botName + ')'),
             BlacklistMessage: $.getSetIniDbString('chatModerator', 'silentBlacklistMessage', 'Using a blacklisted phrase. (Automated by ' + $.botName + ')'),
             SpamTrackerMessage: $.getSetIniDbString('chatModerator', 'silentSpamTrackerMessage', 'Spamming chat. (Automated by ' + $.botName + ')'),
-            FakePurgeMessage: $.getSetIniDbString('chatModerator', 'silentFakePurgeMessage', 'Fake purge. (Automated by ' + $.botName + ')'),
+            FakePurgeMessage: $.getSetIniDbString('chatModerator', 'silentFakePurgeMessage', 'Fake purge. (Automated by ' + $.botName + ')')
         },
 
         warningTime = {
@@ -120,7 +131,7 @@
             Colors: $.getSetIniDbNumber('chatModerator', 'warningTimeColors', 5),
             LongMsg: $.getSetIniDbNumber('chatModerator', 'warningTimeLongMsg', 5),
             SpamTracker: $.getSetIniDbNumber('chatModerator', 'warningTimeSpamTracker', 5),
-            FakePurge: $.getSetIniDbNumber('chatModerator', 'warningTimeFakePurge', 5),
+            FakePurge: $.getSetIniDbNumber('chatModerator', 'warningTimeFakePurge', 5)
         },
 
         timeoutTime = {
@@ -132,7 +143,7 @@
             Colors: $.getSetIniDbNumber('chatModerator', 'timeoutTimeColors', 600),
             LongMsg: $.getSetIniDbNumber('chatModerator', 'timeoutTimeLongMsg', 600),
             SpamTracker: $.getSetIniDbNumber('chatModerator', 'timeoutTimeSpamTracker', 600),
-            FakePurge: $.getSetIniDbNumber('chatModerator', 'timeoutTimeFakePurge', 600),
+            FakePurge: $.getSetIniDbNumber('chatModerator', 'timeoutTimeFakePurge', 600)
         },
 
         moderationLogs = $.getSetIniDbBoolean('chatModerator', 'moderationLogs', false),
@@ -143,7 +154,8 @@
         warning = '',
         youtubeLinks = new RegExp('(youtube.com|youtu.be)', 'i'),
         i,
-        j;
+        j,
+        k;
 
     /**
      * @function reloadModeration
@@ -210,6 +222,18 @@
             LongMsg: $.getIniDbBoolean('chatModerator', 'regularsModerateLongMsg'),
             SpamTracker: $.getIniDbBoolean('chatModerator', 'regularsModerateSpamTracker'),
             FakePurge: $.getSetIniDbBoolean('chatModerator', 'regularsModerateFakePurge')
+        };
+
+        vips = {
+            Links: $.getIniDbBoolean('chatModerator', 'vipsModerateLinks'),
+            Caps: $.getIniDbBoolean('chatModerator', 'vipsModerateCaps'),
+            Symbols: $.getIniDbBoolean('chatModerator', 'vipsModerateSymbols'),
+            Spam: $.getIniDbBoolean('chatModerator', 'vipsModerateSpam'),
+            Emotes: $.getIniDbBoolean('chatModerator', 'vipsModerateEmotes'),
+            Colors: $.getIniDbBoolean('chatModerator', 'vipsModerateColors'),
+            LongMsg: $.getIniDbBoolean('chatModerator', 'vipsModerateLongMsg'),
+            SpamTracker: $.getIniDbBoolean('chatModerator', 'vipsModerateSpamTracker'),
+            FakePurge: $.getSetIniDbBoolean('chatModerator', 'vipsModerateFakePurge')
         };
 
         silentTimeout = {
@@ -302,17 +326,19 @@
      */
     function loadBlackList() {
         var keys = $.inidb.GetKeyList('blackList', '');
-            blackList = [];
+        blackList = [];
 
         for (i = 0; i < keys.length; i++) {
             var json = JSON.parse($.inidb.get('blackList', keys[i]));
 
-            if (json != null) {
+            if (json !== null) {
                 if (json.isRegex) {
                     try {
                         json.phrase = new RegExp(json.phrase.replace('regex:', ''));
                     } catch (ex) {
-                        // Failed to create regex, ignore this and don't make it a blacklist.
+                        // Failed to create regex, use as non-regex.
+                        json.phrase = json.phrase.replace('regex:', '').toLowerCase();
+                        json.isRegex = false;
                         continue;
                     }
                 } else {
@@ -326,14 +352,23 @@
     }
 
     /**
+     * @function addToWhiteList
+     *
+     * @param {string} url
+     */
+    function addToWhiteList(url) {
+        whiteList.push(new RegExp(url.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'g'));
+    }
+
+    /**
      * @function loadWhiteList
      */
     function loadWhiteList() {
         var keys = $.inidb.GetKeyList('whiteList', '');
-            whiteList = [];
+        whiteList = [];
 
         for (i = 0; i < keys.length; i++) {
-            whiteList.push(keys[i]);
+            addToWhiteList(keys[i] + '');
         }
     }
 
@@ -347,9 +382,9 @@
      */
     function timeoutUserFor(username, time, reason, tags) {
         if (time == 0) {
-            $.session.sayNow('.delete ' + tags.get('id')); // Cannot send a reason/time with this.
+            Packages.tv.phantombot.PhantomBot.instance().getSession().sayNow('.delete ' + tags.get('id')); // Cannot send a reason/time with this.
         } else {
-            $.session.sayNow('.timeout ' + username + ' ' + time + ' ' + reason);
+            Packages.tv.phantombot.PhantomBot.instance().getSession().sayNow('.timeout ' + username + ' ' + time + ' ' + reason);
         }
     }
 
@@ -360,7 +395,7 @@
      * @param {string} reason
      */
     function banUser(username, reason) {
-        $.session.sayNow('.ban ' + username + ' ' + reason);
+        Packages.tv.phantombot.PhantomBot.instance().getSession().sayNow('.ban ' + username + ' ' + reason);
     }
 
     /**
@@ -397,7 +432,7 @@
      */
     function sendMessage(username, message, filter) {
         if (filter == false && messageTime < $.systemTime() && $.getMessageWrites() < 7) {
-            $.session.sayNow('@' + username + ', ' + message + ' ' + warning);
+            Packages.tv.phantombot.PhantomBot.instance().getSession().sayNow('@' + username + ', ' + message + ' ' + warning);
             messageTime = ((msgCooldownSec * 1000) + $.systemTime());
         }
     }
@@ -450,8 +485,8 @@
     function checkBlackList(sender, event, message, tags) {
         for (i in blackList) {
             if (blackList[i].isRegex) {
-                if (blackList[i].phrase.test(message)) {
-                    if (blackList[i].excludeRegulars && $.isReg(sender) || blackList[i].excludeSubscribers && $.isSubv3(sender, event.getTags())) {
+                if ($.test(message, blackList[i].phrase)) {
+                    if (blackList[i].excludeRegulars && $.isReg(sender) || blackList[i].excludeSubscribers && $.isSubv3(sender, event.getTags()) || blackList[i].excludeVips && $.isVIP(sender, event.getTags())) {
                         return false;
                     }
 
@@ -468,7 +503,7 @@
                 }
             } else {
                 if (message.indexOf(blackList[i].phrase) !== -1) {
-                    if (blackList[i].excludeRegulars && $.isReg(sender) || blackList[i].excludeSubscribers && $.isSubv3(sender, event.getTags())) {
+                    if (blackList[i].excludeRegulars && $.isReg(sender) || blackList[i].excludeSubscribers && $.isSubv3(sender, event.getTags()) || blackList[i].excludeVips && $.isVIP(sender, event.getTags())) {
                         return false;
                     }
 
@@ -494,10 +529,23 @@
      * @param {string} message
      */
     function checkWhiteList(message) {
+        function checkLink(link, whiteListItem) {
+            var baseLink = $.match(link, /[^.]*[^/]*/)[0];
+            var matches = $.matchAll(link, whiteListItem);
+            for (k = 0; k < matches.length; k++) {
+                var matchStart = matches[k].index;
+                var matchEnd = matches[k].index + matches[k][0].length;
+                if (matchStart < baseLink.length && matchEnd >= baseLink.length) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         var links = $.patternDetector.getLinks(message);
-        for (i in whiteList) {
+        for (i = 0; i < whiteList.length; i++) {
             for (j = 0; j < links.length; j++) {
-                if (links[j].indexOf(whiteList[i]) !== -1) {
+                if (checkLink(links[j], whiteList[i])) {
                     links.splice(j--, 1);
                 }
             }
@@ -514,7 +562,7 @@
      * @param {string} message
      */
     function checkYoutubePlayer(message) {
-        if ($.youtubePlayerConnected && youtubeLinks.test(message)) {
+        if ($.youtubePlayerConnected && $.test(message, youtubeLinks)) {
             return true;
         }
         return false;
@@ -539,7 +587,7 @@
             if (linksToggle && $.patternDetector.hasLinks(event)) {
                 if (checkYoutubePlayer(message) || checkPermitList(sender) || checkWhiteList(message)) {
                     return;
-                } else if (!regulars.Links && $.isReg(sender) || !subscribers.Links && $.isSubv3(sender, event.getTags())) {
+                } else if ((!regulars.Links && $.isReg(sender)) || (!subscribers.Links && $.isSubv3(sender, event.getTags())) || (!vips.Links && $.isVIP(sender, event.getTags()))) {
                     return;
                 }
 
@@ -552,7 +600,7 @@
             // Symbol filter
             if (symbolsToggle && messageLength >= symbolsTriggerLength) {
                 if ($.patternDetector.getLongestNonLetterSequence(event) >= symbolsGroupLimit || (($.patternDetector.getNumberOfNonLetters(event) / messageLength) * 100) >= symbolsLimitPercent) {
-                    if (!regulars.Symbols && $.isReg(sender) || !subscribers.Symbols && $.isSubv3(sender, event.getTags())) {
+                    if ((!regulars.Symbols && $.isReg(sender)) || (!subscribers.Symbols && $.isSubv3(sender, event.getTags())) || (!vips.Symbols && $.isVIP(sender, event.getTags()))) {
                         return;
                     }
 
@@ -564,7 +612,7 @@
 
             // Spam filter
             if (spamToggle && $.patternDetector.getLongestRepeatedSequence(event) >= spamLimit) {
-                if (!regulars.Spam && $.isReg(sender) || !subscribers.Spam && $.isSubv3(sender, event.getTags())) {
+                if ((!regulars.Spam && $.isReg(sender)) || (!subscribers.Spam && $.isSubv3(sender, event.getTags())) || (!vips.Spam && $.isVIP(sender, event.getTags()))) {
                     return;
                 }
 
@@ -575,7 +623,7 @@
 
             // Long msg filter
             if (longMessageToggle && messageLength >= longMessageLimit) {
-                if (!regulars.LongMsg && $.isReg(sender) || !subscribers.LongMsg && $.isSubv3(sender, event.getTags())) {
+                if ((!regulars.LongMsg && $.isReg(sender)) || (!subscribers.LongMsg && $.isSubv3(sender, event.getTags())) || (!vips.LongMsg && $.isVIP(sender, event.getTags()))) {
                     return;
                 }
 
@@ -586,7 +634,7 @@
 
             // Fake purge filter
             if (fakePurgeToggle && $.patternDetector.getFakePurge(event)) {
-                if (!regulars.FakePurge && $.isReg(sender) || !subscribers.FakePurge && $.isSubv3(sender, event.getTags())) {
+                if ((!regulars.FakePurge && $.isReg(sender)) || (!subscribers.FakePurge && $.isSubv3(sender, event.getTags())) || (!vips.FakePurge && $.isVIP(sender, event.getTags()))) {
                     return;
                 }
 
@@ -597,7 +645,7 @@
 
             // Emotes folter
             if (emotesToggle && $.patternDetector.getEmotesCount(event) >= emotesLimit) {
-                if (!regulars.Emotes && $.isReg(sender) || !subscribers.Emotes && $.isSubv3(sender, event.getTags())) {
+                if ((!regulars.Emotes && $.isReg(sender)) || (!subscribers.Emotes && $.isSubv3(sender, event.getTags())) || (!vips.Emotes && $.isVIP(sender, event.getTags()))) {
                     return;
                 }
 
@@ -609,7 +657,7 @@
             // Caps filter
             if (capsToggle && messageLength >= capsTriggerLength) {
                 if ((($.patternDetector.getNumberOfCaps(event) / messageLength) * 100) >= capsLimitPercent) {
-                    if (!regulars.Caps && $.isReg(sender) || !subscribers.Caps && $.isSubv3(sender, event.getTags())) {
+                    if ((!regulars.Caps && $.isReg(sender)) || (!subscribers.Caps && $.isSubv3(sender, event.getTags())) || (!vips.Caps && $.isVIP(sender, event.getTags()))) {
                         return;
                     }
 
@@ -621,7 +669,7 @@
 
             // Color filter
             if (colorsToggle && $.patternDetector.getColoredMessage(event)) {
-                if (!regulars.Colors && $.isReg(sender) || !subscribers.Colors && $.isSubv3(sender, event.getTags())) {
+                if ((!regulars.Colors && $.isReg(sender)) || (!subscribers.Colors && $.isSubv3(sender, event.getTags())) || (!vips.Colors && $.isVIP(sender, event.getTags()))) {
                     return;
                 }
 
@@ -632,7 +680,7 @@
 
             // Spam tracker
             if (spamTrackerToggle) {
-                if (!regulars.SpamTracker && $.isReg(sender) || !subscribers.SpamTracker && $.isSubv3(sender, event.getTags())) {
+                if ((!regulars.SpamTracker && $.isReg(sender)) || (!subscribers.SpamTracker && $.isSubv3(sender, event.getTags())) || (!vips.SpamTracker && $.isVIP(sender, event.getTags()))) {
                     return;
                 }
 
@@ -777,6 +825,23 @@
                 }
             }
 
+            if (action.equalsIgnoreCase('vips')) {
+                if (subAction && subAction.equalsIgnoreCase('spamtracker')) {
+                    if (!args[2]) {
+                        $.say($.whisperPrefix(sender) + $.lang.get('chatmoderator.vips.toggle.spamtracker', getModerationFilterStatus(vips.SpamTracker)));
+                        return;
+                    }
+
+                    if (args[2].equalsIgnoreCase('true') || args[2].equalsIgnoreCase('false')) {
+                        vips.SpamTracker = args[2].equalsIgnoreCase('true');
+                        $.inidb.set('chatModerator', 'vipsModerateSpamTracker', vips.SpamTracker);
+                        $.say($.whisperPrefix(sender) + (vips.SpamTracker ? $.lang.get('chatmoderator.vips.spamtracker.allowed') : $.lang.get('chatmoderator.vips.spamtracker.not.allowed')));
+                        $.log.event(sender + ' changed vips moderation for spam tracker to ' + args[2]);
+                        return;
+                    }
+                }
+            }
+
             if (action.equalsIgnoreCase('silenttimeout')) {
                 if (subAction && subAction.equalsIgnoreCase('spamtracker')) {
                     if (!args[2]) {
@@ -889,6 +954,23 @@
                 }
             }
 
+            if (action.equalsIgnoreCase('vips')) {
+                if (subAction && subAction.equalsIgnoreCase('fakepurge')) {
+                    if (!args[2]) {
+                        $.say($.whisperPrefix(sender) + $.lang.get('chatmoderator.vips.toggle.fakepurge', getModerationFilterStatus(vips.FakePurge)));
+                        return;
+                    }
+
+                    if (args[2].equalsIgnoreCase('true') || args[2].equalsIgnoreCase('false')) {
+                        vips.FakePurge = args[2].equalsIgnoreCase('true');
+                        $.inidb.set('chatModerator', 'vipsModerateFakePurge', vips.FakePurge);
+                        $.say($.whisperPrefix(sender) + (vips.FakePurge ? $.lang.get('chatmoderator.vips.fakepurge.allowed') : $.lang.get('chatmoderator.vips.fakepurge.not.allowed')));
+                        $.log.event(sender + ' changed vips moderation for fake purge to ' + args[2]);
+                        return;
+                    }
+                }
+            }
+
             if (action.equalsIgnoreCase('silenttimeout')) {
                 if (subAction && subAction.equalsIgnoreCase('fakepurge')) {
                     if (!args[2]) {
@@ -965,6 +1047,7 @@
                     isSilent: false,
                     excludeRegulars: false,
                     excludeSubscribers: false,
+                    excludeVips: false,
                     message: timeout !== -1 ? String(blacklistMessage) : String(blacklistMessageBan),
                     banReason: String(silentTimeout.BlacklistMessage)
                 };
@@ -1009,9 +1092,9 @@
                     $.say($.whisperPrefix(sender) + $.lang.get('chatmoderator.whitelist.add.usage'));
                     return;
                 }
-                var link = argString.split(' ').slice(1).join(' ').toLowerCase();
+                var link = argString.split(' ').slice(1).join(' ').toLowerCase() + '';
                 $.inidb.set('whiteList', link, 'true');
-                whiteList.push(link);
+                addToWhiteList(link);
                 $.say($.whisperPrefix(sender) + $.lang.get('chatmoderator.whitelist.link.added'));
                 $.log.event('"' + link + '" was added the the whitelist by ' + sender);
             }
@@ -1050,7 +1133,7 @@
 
             // if the user got a warning/timeout, unban him, and remove him from the warning/timeout list.
             if (timeouts[action] !== undefined) {
-                $.session.sayNow('.unban ' + action);
+                Packages.tv.phantombot.PhantomBot.instance().getSession().sayNow('.unban ' + action);
                 delete timeouts[action];
             }
 
@@ -1424,6 +1507,109 @@
                         $.inidb.set('chatModerator', 'subscribersModerateColors', subscribers.LongMsg);
                         $.say($.whisperPrefix(sender) + (subscribers.LongMsg ? $.lang.get('chatmoderator.subscribers.long.messages.allowed') : $.lang.get('chatmoderator.subscribers.long.messages.not.allowed')));
                         $.log.event(sender + ' changed subscribers moderation for long messages to ' + args[2]);
+                        return;
+                    }
+                }
+            }
+
+            /**
+             * @commandpath moderation vips [links / caps / symbols / spam / emotes / colors / longmessages / spamtracker / fakepurge] [true / false] - Enable or disable if vips get moderated by that filter
+             */
+            if (action.equalsIgnoreCase('vips')) {
+                if (!subAction) {
+                    $.say($.whisperPrefix(sender) + $.lang.get('chatmoderator.vips.usage'));
+                    return;
+                }
+
+                if (subAction.equalsIgnoreCase('links')) {
+                    if (!args[2]) {
+                        $.say($.whisperPrefix(sender) + $.lang.get('chatmoderator.vips.toggle.link', getModerationFilterStatus(vips.Links)));
+                        return;
+                    }
+
+                    if (args[2].equalsIgnoreCase('true') || args[2].equalsIgnoreCase('false')) {
+                        vips.Links = args[2].equalsIgnoreCase('true');
+                        $.inidb.set('chatModerator', 'vipsModerateLinks', vips.Links);
+                        $.say($.whisperPrefix(sender) + (vips.Links ? $.lang.get('chatmoderator.vips.links.allowed') : $.lang.get('chatmoderator.vips.links.not.allowed')));
+                        $.log.event(sender + ' changed vips moderation for links to ' + args[2]);
+                        return;
+                    }
+                } else if (subAction.equalsIgnoreCase('caps')) {
+                    if (!args[2]) {
+                        $.say($.whisperPrefix(sender) + $.lang.get('chatmoderator.vips.toggle.caps', getModerationFilterStatus(vips.Caps)));
+                        return;
+                    }
+
+                    if (args[2].equalsIgnoreCase('true') || args[2].equalsIgnoreCase('false')) {
+                        vips.Caps = args[2].equalsIgnoreCase('true');
+                        $.inidb.set('chatModerator', 'vipsModerateCaps', vips.Caps);
+                        $.say($.whisperPrefix(sender) + (vips.Caps ? $.lang.get('chatmoderator.vips.caps.allowed') : $.lang.get('chatmoderator.vips.caps.not.allowed')));
+                        $.log.event(sender + ' changed vips moderation for caps to ' + args[2]);
+                        return;
+                    }
+                } else if (subAction.equalsIgnoreCase('symbols')) {
+                    if (!args[2]) {
+                        $.say($.whisperPrefix(sender) + $.lang.get('chatmoderator.vips.toggle.symbols', getModerationFilterStatus(vips.Symbols)));
+                        return;
+                    }
+
+                    if (args[2].equalsIgnoreCase('true') || args[2].equalsIgnoreCase('false')) {
+                        vips.Symbols = args[2].equalsIgnoreCase('true');
+                        $.inidb.set('chatModerator', 'vipsModerateSymbols', vips.Symbols);
+                        $.say($.whisperPrefix(sender) + (vips.Symbols ? $.lang.get('chatmoderator.vips.symbols.allowed') : $.lang.get('chatmoderator.vips.symbols.not.allowed')));
+                        $.log.event(sender + ' changed vips moderation for symbols to ' + args[2]);
+                        return;
+                    }
+                } else if (subAction.equalsIgnoreCase('spam')) {
+                    if (!args[2]) {
+                        $.say($.whisperPrefix(sender) + $.lang.get('chatmoderator.vips.toggle.spam', getModerationFilterStatus(vips.Spam)));
+                        return;
+                    }
+
+                    if (args[2].equalsIgnoreCase('true') || args[2].equalsIgnoreCase('false')) {
+                        vips.Spam = args[2].equalsIgnoreCase('true');
+                        $.inidb.set('chatModerator', 'vipsModerateSpam', vips.Spam);
+                        $.say($.whisperPrefix(sender) + (vips.Spam ? $.lang.get('chatmoderator.vips.spam.allowed') : $.lang.get('chatmoderator.vips.spam.not.allowed')));
+                        $.log.event(sender + ' changed vips moderation for spam to ' + args[2]);
+                        return;
+                    }
+                } else if (subAction.equalsIgnoreCase('emotes')) {
+                    if (!args[2]) {
+                        $.say($.whisperPrefix(sender) + $.lang.get('chatmoderator.vips.toggle.emotes', getModerationFilterStatus(vips.Emotes)));
+                        return;
+                    }
+
+                    if (args[2].equalsIgnoreCase('true') || args[2].equalsIgnoreCase('false')) {
+                        vips.Emotes = args[2].equalsIgnoreCase('true');
+                        $.inidb.set('chatModerator', 'vipsModerateEmotes', vips.Emotes);
+                        $.say($.whisperPrefix(sender) + (vips.Emotes ? $.lang.get('chatmoderator.vips.emotes.allowed') : $.lang.get('chatmoderator.vips.emotes.not.allowed')));
+                        $.log.event(sender + ' changed vips moderation for emotes to ' + args[2]);
+                        return;
+                    }
+                } else if (subAction.equalsIgnoreCase('colors')) {
+                    if (!args[2]) {
+                        $.say($.whisperPrefix(sender) + $.lang.get('chatmoderator.vips.toggle.colors', getModerationFilterStatus(vips.Colors)));
+                        return;
+                    }
+
+                    if (args[2].equalsIgnoreCase('true') || args[2].equalsIgnoreCase('false')) {
+                        vips.Colors = args[2].equalsIgnoreCase('true');
+                        $.inidb.set('chatModerator', 'vipsModerateColors', vips.Colors);
+                        $.say($.whisperPrefix(sender) + (vips.Colors ? $.lang.get('chatmoderator.vips.colors.allowed') : $.lang.get('chatmoderator.vips.colors.not.allowed')));
+                        $.log.event(sender + ' changed vips moderation for colors to ' + args[2]);
+                        return;
+                    }
+                } else if (subAction.equalsIgnoreCase('longmessages')) {
+                    if (!args[2]) {
+                        $.say($.whisperPrefix(sender) + $.lang.get('chatmoderator.vips.toggle.long.msg', getModerationFilterStatus(vips.LongMsg)));
+                        return;
+                    }
+
+                    if (args[2].equalsIgnoreCase('true') || args[2].equalsIgnoreCase('false')) {
+                        vips.LongMsg = args[2].equalsIgnoreCase('true');
+                        $.inidb.set('chatModerator', 'vipsModerateColors', vips.LongMsg);
+                        $.say($.whisperPrefix(sender) + (vips.LongMsg ? $.lang.get('chatmoderator.vips.long.messages.allowed') : $.lang.get('chatmoderator.vips.long.messages.not.allowed')));
+                        $.log.event(sender + ' changed vips moderation for long messages to ' + args[2]);
                         return;
                     }
                 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@ public class TwitchGameChangeEvent extends TwitchEvent {
     /**
      * Class constructor.
      *
-     * @param {String} gameTitle
+     * @param gameTitle
      */
     public TwitchGameChangeEvent(String gameTitle) {
         this.gameTitle = gameTitle;
@@ -33,7 +33,7 @@ public class TwitchGameChangeEvent extends TwitchEvent {
     /**
      * Method that returns the game name
      *
-     * @return {String} gameTitle
+     * @return gameTitle
      */
     public String getGameTitle() {
         return this.gameTitle;

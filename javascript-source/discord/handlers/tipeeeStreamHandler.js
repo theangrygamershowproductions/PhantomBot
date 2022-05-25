@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -77,11 +77,11 @@
         }
 
         if (s.match(/\(amount\)/)) {
-            s = $.replace(s, '(amount)', parseInt(donationAmount.toFixed(2)));
+            s = $.replace(s, '(amount)', donationAmount.toFixed(2));
         }
 
         if (s.match(/\(amount\.toFixed\(0\)\)/)) {
-            s = $.replace(s, '(amount.toFixed(0))', parseInt(donationAmount.toFixed(0)));
+            s = $.replace(s, '(amount.toFixed(0))', donationAmount.toFixed(0));
         }
 
         if (s.match(/\(message\)/)) {
@@ -153,9 +153,9 @@
                     return;
                 }
 
-                channelName = subAction.replace('#', '').toLowerCase();
+                channelName = $.discord.sanitizeChannelName(subAction);
                 $.inidb.set('discordSettings', 'tipeeestreamChannel', channelName);
-                $.discord.say(channel, $.discord.userPrefix(mention) + $.lang.get('discord.tipeeestreamhandler.channel.set', channelName));
+                $.discord.say(channel, $.discord.userPrefix(mention) + $.lang.get('discord.tipeeestreamhandler.channel.set', subAction));
             }
         }
     });

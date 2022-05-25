@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,9 +17,12 @@
 package com.gmt2001.Console;
 
 import com.gmt2001.Logger;
+import com.gmt2001.RollbarProvider;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.util.Map;
 import tv.phantombot.PhantomBot;
 
 public final class warn {
@@ -29,13 +32,12 @@ public final class warn {
 
     public static void print(Object o) {
         String stackInfo;
-        String methodName = Thread.currentThread().getStackTrace()[2].getMethodName();
-        String fileName = Thread.currentThread().getStackTrace()[2].getFileName();
-        int lineNumber = Thread.currentThread().getStackTrace()[2].getLineNumber();
-        stackInfo = "[" +  methodName + "()@" + fileName + ":" + lineNumber + "] ";
+        StackTraceElement st = debug.findCaller();
+
+        stackInfo = "[" + st.getMethodName() + "()@" + st.getFileName() + ":" + st.getLineNumber() + "] ";
 
         Logger.instance().log(Logger.LogType.Warning, "[" + logTimestamp.log() + "] " + stackInfo + o.toString());
-        System.out.print("[" + logTimestamp.log() + "] [INFO] " + o);
+        System.out.print("[" + logTimestamp.log() + "] [WARN] " + o);
     }
 
     public static void println() {
@@ -44,49 +46,86 @@ public final class warn {
 
     public static void printlnRhino(Object o) {
         // Do not write to a log file as the JS Rhino files already do this. //
-        System.out.println("[" + logTimestamp.log() + "] [INFO] " + o);
+        System.out.println("[" + logTimestamp.log() + "] [WARN] " + o);
     }
 
     public static void println(Object o) {
         String stackInfo;
-        String methodName = Thread.currentThread().getStackTrace()[2].getMethodName();
-        String fileName = Thread.currentThread().getStackTrace()[2].getFileName();
-        int lineNumber = Thread.currentThread().getStackTrace()[2].getLineNumber();
-        stackInfo = "[" +  methodName + "()@" + fileName + ":" + lineNumber + "] ";
+        StackTraceElement st = debug.findCaller();
+
+        stackInfo = "[" + st.getMethodName() + "()@" + st.getFileName() + ":" + st.getLineNumber() + "] ";
 
         Logger.instance().log(Logger.LogType.Warning, "[" + logTimestamp.log() + "] " + stackInfo + o.toString());
         Logger.instance().log(Logger.LogType.Warning, "");
-        System.out.println("[" + logTimestamp.log() + "] [INFO] " + stackInfo + o.toString());
+        System.out.println("[" + logTimestamp.log() + "] [WARN] " + stackInfo + o.toString());
     }
 
-    public static void println(Object o, Boolean logOnly) {
+    public static void println(Object o, boolean logOnly) {
         String stackInfo;
-        String methodName = Thread.currentThread().getStackTrace()[2].getMethodName();
-        String fileName = Thread.currentThread().getStackTrace()[2].getFileName();
-        int lineNumber = Thread.currentThread().getStackTrace()[2].getLineNumber();
-        stackInfo = "[" +  methodName + "()@" + fileName + ":" + lineNumber + "] ";
+        StackTraceElement st = debug.findCaller();
+
+        stackInfo = "[" + st.getMethodName() + "()@" + st.getFileName() + ":" + st.getLineNumber() + "] ";
 
         Logger.instance().log(Logger.LogType.Warning, "[" + logTimestamp.log() + "] " + stackInfo + o.toString());
         Logger.instance().log(Logger.LogType.Warning, "");
         if (!logOnly) {
-            System.out.println("[" + logTimestamp.log() + "] [INFO] " + stackInfo + o.toString());
+            System.out.println("[" + logTimestamp.log() + "] [WARN] " + stackInfo + o.toString());
         }
     }
 
     public static void printStackTrace(Throwable e) {
-        if (PhantomBot.getEnableDebugging()) {
+        printStackTrace(e, "");
+    }
+
+    public static void printStackTrace(Throwable e, boolean force) {
+        printStackTrace(e, null, "", force);
+    }
+
+    public static void printStackTrace(Throwable e, String description) {
+        printStackTrace(e, null, description);
+    }
+
+    public static void printStackTrace(Throwable e, Map<String, Object> custom) {
+        printStackTrace(e, custom, "");
+    }
+
+    public static void printStackTrace(Throwable e, Map<String, Object> custom, String description) {
+        printStackTrace(e, custom, description, false);
+    }
+
+    public static void printStackTrace(Throwable e, Map<String, Object> custom, String description, boolean force) {
+        if (PhantomBot.getEnableDebugging() || force) {
             e.printStackTrace(System.err);
         }
-        logStackTrace(e);
+
+        logStackTrace(e, custom, description);
     }
 
     public static void logStackTrace(Throwable e) {
-        Writer trace = new StringWriter();
-        PrintWriter ptrace = new PrintWriter(trace);
+        logStackTrace(e, "");
+    }
 
-        e.printStackTrace(ptrace);
+    public static void logStackTrace(Throwable e, String description) {
+        logStackTrace(e, null, description);
+    }
 
-        Logger.instance().log(Logger.LogType.Warning, "[" + logTimestamp.log() + "] " + trace.toString());
-        Logger.instance().log(Logger.LogType.Warning, "");
+    public static void logStackTrace(Throwable e, Map<String, Object> custom) {
+        logStackTrace(e, custom, "");
+    }
+
+    public static void logStackTrace(Throwable e, Map<String, Object> custom, String description) {
+        RollbarProvider.instance().warning(e, custom, description);
+
+        try ( Writer trace = new StringWriter()) {
+            try ( PrintWriter ptrace = new PrintWriter(trace)) {
+
+                e.printStackTrace(ptrace);
+
+                Logger.instance().log(Logger.LogType.Warning, "[" + logTimestamp.log() + "] " + trace.toString());
+                Logger.instance().log(Logger.LogType.Warning, "");
+            }
+        } catch (IOException ex) {
+            err.printStackTrace(ex);
+        }
     }
 }

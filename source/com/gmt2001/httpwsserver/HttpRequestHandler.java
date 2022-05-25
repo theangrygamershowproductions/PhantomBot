@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,16 +30,16 @@ public interface HttpRequestHandler {
     /**
      * Registers this {@link HttpRequestHandler} with the {@link HttpServerPageHandler}
      *
-     * @return {@code this}
+     * @return
      */
-    public HttpRequestHandler register();
+    HttpRequestHandler register();
 
     /**
      * Gets the {@link HttpAuthenticationHandler} assigned to this endpoint
      *
      * @return An {@link HttpAuthenticationHandler}
      */
-    public HttpAuthenticationHandler getAuthHandler();
+    HttpAuthenticationHandler getAuthHandler();
 
     /**
      * Handles the HTTP request and sends a response back to the client
@@ -49,5 +49,5 @@ public interface HttpRequestHandler {
      * @param ctx The {@link ChannelHandlerContext} of the session
      * @param req The {@link FullHttpRequest} containing the request
      */
-    public void handleRequest(ChannelHandlerContext ctx, FullHttpRequest req);
+    void handleRequest(ChannelHandlerContext ctx, FullHttpRequest req);
 }

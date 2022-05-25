@@ -242,7 +242,7 @@ $(function() {
     helpers.getPlayerSize = () => {
         let size = localStorage.getItem('phantombot_ytplayer_size');
 
-        return (size === null ? 'Default' : size[0].toUpperCase() + size.substr(1));
+        return (size === null ? 'Default' : size[0].toUpperCase() + size.slice(1));
     };
 
     /*
@@ -271,6 +271,11 @@ $(function() {
                 $('#right-section').attr('class', 'col-md-5');
         }
     };
+
+    helpers.urlIsIP = () => {
+        var rx=/^(?!0)(?!.*\.$)((1?\d?\d|25[0-5]|2[0-4]\d)(\.|$)){4}$/;
+        return rx.test(window.location.hostname);
+    }
 
     // Export object.
     window.helpers = helpers;

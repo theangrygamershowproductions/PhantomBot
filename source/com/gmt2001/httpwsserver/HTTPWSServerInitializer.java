@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,9 +21,9 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.handler.codec.http.websocketx.WebSocketFrameAggregator;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketServerCompressionHandler;
-import io.netty.handler.ssl.OptionalSslHandler;
 import io.netty.handler.ssl.SslContext;
 
 /**
@@ -34,18 +34,10 @@ import io.netty.handler.ssl.SslContext;
 class HTTPWSServerInitializer extends ChannelInitializer<SocketChannel> {
 
     /**
-     * The SSL context to use
-     */
-    private final SslContext sslCtx;
-
-    /**
      * Constructor
-     *
-     * @param sslCtx Either {@code null} or a prepared {@link SslContext}
      */
-    public HTTPWSServerInitializer(SslContext sslCtx) {
+    public HTTPWSServerInitializer() {
         super();
-        this.sslCtx = sslCtx;
     }
 
     /**
@@ -58,14 +50,16 @@ class HTTPWSServerInitializer extends ChannelInitializer<SocketChannel> {
     protected void initChannel(SocketChannel ch) throws Exception {
         ChannelPipeline pipeline = ch.pipeline();
 
+        SslContext sslCtx = HTTPWSServer.instance().getSslContext();
         if (sslCtx != null) {
-            pipeline.addLast(new HttpOptionalSslHandler(sslCtx));
+            pipeline.addLast("sslhandler", new HttpOptionalSslHandler(sslCtx));
         }
 
         pipeline.addLast(new HttpServerCodec());
         pipeline.addLast(new HttpObjectAggregator(65536));
         pipeline.addLast(new WebSocketServerCompressionHandler());
         pipeline.addLast(new WebSocketServerProtocolHandler("/ws", null, true, 65536, false, true));
+        pipeline.addLast(new WebSocketFrameAggregator(65536));
         pipeline.addLast("pagehandler", new HttpServerPageHandler());
         pipeline.addLast("wshandler", new WebSocketFrameHandler());
     }

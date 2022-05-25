@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,7 +26,7 @@ public abstract class DataStore {
         return null;
     }
 
-    protected DataStore(String configStr) {
+    protected DataStore(String unused) {
     }
 
     public void SaveAll(boolean force) {
@@ -234,13 +234,13 @@ public abstract class DataStore {
         SetString(fName, section, key, sval);
     }
 
-    public Boolean GetBoolean(String fName, String section, String key) {
-        int ival = GetInteger(fName, section, key);
+    public boolean GetBoolean(String fName, String section, String key) {
+        String val = GetString(fName, section, key);
 
-        return ival == 1;
+        return val != null && (val.equals("1") || val.equalsIgnoreCase("true") || val.equalsIgnoreCase("yes"));
     }
 
-    public void SetBoolean(String fName, String section, String key, Boolean value) {
+    public void SetBoolean(String fName, String section, String key, boolean value) {
         int ival = 0;
 
         if (value) {
@@ -332,6 +332,10 @@ public abstract class DataStore {
 
     public String[] searchByKey(String fName, String search) {
         return GetKeysByLikeKeys(fName, "", search);
+    }
+
+    public String[][] executeSql(String sql, String[] replacements) {
+        return new String[][]{};
     }
 
     public void CreateIndexes() {

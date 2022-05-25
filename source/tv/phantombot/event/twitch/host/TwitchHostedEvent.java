@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@ public class TwitchHostedEvent extends TwitchHostEvent {
     /**
      * Class constructor.
      *
-     * @param {String} hoster
+     * @param hoster
      */
     public TwitchHostedEvent(String hoster) {
         super(hoster);
@@ -30,8 +30,8 @@ public class TwitchHostedEvent extends TwitchHostEvent {
     /**
      * Class constructor.
      *
-     * @param {String} hoster
-     * @param {int}    users
+     * @param hoster
+     * @param    users
      */
     public TwitchHostedEvent(String hoster, int users) {
         super(hoster, users);

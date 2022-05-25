@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,9 +20,9 @@ public class PubSubModerationDeleteEvent extends PubSubModerationEvent {
     /**
      * Class constructor.
      *
-     * @param {String} username
-     * @param {String} creator
-     * @param {String} message
+     * @param username
+     * @param creator
+     * @param message
      */
     public PubSubModerationDeleteEvent(String username, String creator, String message) {
         super(username, creator, message);

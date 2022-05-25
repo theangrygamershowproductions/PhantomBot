@@ -1,7 +1,7 @@
 /* astyle --style=java --indent=spaces=4 --mode=java */
 
-/*
- * Copyright (C) 2016-2019 phantombot.tv
+ /*
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,72 +21,50 @@ package tv.phantombot.cache;
 import com.illusionaryone.TwitchAlertsAPIv1;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
-import tv.phantombot.event.EventBus;
-import tv.phantombot.PhantomBot;
-import tv.phantombot.event.streamlabs.donate.StreamLabsDonationEvent;
-import tv.phantombot.event.streamlabs.donate.StreamLabsDonationInitializedEvent;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import tv.phantombot.PhantomBot;
+import tv.phantombot.event.EventBus;
+import tv.phantombot.event.streamlabs.donate.StreamLabsDonationEvent;
+import tv.phantombot.event.streamlabs.donate.StreamLabsDonationInitializedEvent;
 
 public class DonationsCache implements Runnable {
 
-    private static final Map<String, DonationsCache> instances = new ConcurrentHashMap<>();
-    public static DonationsCache instance(String channel) {
-        DonationsCache instance = instances.get(channel);
-        if (instance == null) {
-            instance = new DonationsCache(channel);
-            instances.put(channel, instance);
-            return instance;
-        }
-        return instance;
+    private static final DonationsCache INSTANCE = new DonationsCache();
+
+    public static DonationsCache instance() {
+        return INSTANCE;
     }
 
-    private Map<String, String> cache = new ConcurrentHashMap<>();
-    private final String channel;
     private final Thread updateThread;
     private boolean firstUpdate = true;
     private Date timeoutExpire = new Date();
     private Date lastFail = new Date();
     private int numfail = 0;
-    private int id = 0;
     private boolean killed = false;
 
     @SuppressWarnings("CallToThreadStartDuringObjectConstruction")
-    private DonationsCache(String channel) {
-        if (channel.startsWith("#")) {
-            channel = channel.substring(1);
-        }
-
-        this.channel = channel;
+    private DonationsCache() {
         this.updateThread = new Thread(this, "tv.phantombot.cache.DonationsCache");
 
         Thread.setDefaultUncaughtExceptionHandler(com.gmt2001.UncaughtExceptionHandler.instance());
         this.updateThread.setUncaughtExceptionHandler(com.gmt2001.UncaughtExceptionHandler.instance());
-
-        updateThread.start();
-    }
-
-    public boolean exists(String donationID) {
-        return cache.containsKey(donationID);
-    }
-
-    public int count() {
-        return cache.size();
     }
 
     private void checkLastFail() {
         Calendar cal = Calendar.getInstance();
-        numfail = (lastFail.after(new Date()) ? numfail + 1 : 1);
+        this.numfail = (this.lastFail.after(new Date()) ? this.numfail + 1 : 1);
 
         cal.add(Calendar.MINUTE, 1);
-        lastFail = cal.getTime();
+        this.lastFail = cal.getTime();
 
-        if (numfail > 5) {
-            timeoutExpire = cal.getTime();
+        if (this.numfail > 5) {
+            this.timeoutExpire = cal.getTime();
         }
+    }
+
+    public void start() {
+        this.updateThread.start();
     }
 
     @Override
@@ -98,18 +76,14 @@ public class DonationsCache implements Runnable {
             com.gmt2001.Console.debug.println("DonationsCache.run: Failed to execute initial sleep [InterruptedException]: " + ex.getMessage());
         }
 
-        while (!killed) {
+        while (!this.killed) {
             try {
-                try {
-                    if (new Date().after(timeoutExpire)) {
-                        this.updateCache();
-                    }
-                } catch (Exception ex) {
-                    checkLastFail();
-                    com.gmt2001.Console.debug.println("DonationsCache.run: Failed to update donations: " + ex.getMessage());
+                if (new Date().after(this.timeoutExpire)) {
+                    this.updateCache();
                 }
             } catch (Exception ex) {
-                com.gmt2001.Console.err.println("DonationsCache.run: Failed to update donations: " + ex.getMessage());
+                checkLastFail();
+                com.gmt2001.Console.err.printStackTrace(ex);
             }
 
             try {
@@ -121,78 +95,45 @@ public class DonationsCache implements Runnable {
     }
 
     private void updateCache() throws Exception {
-        Map<String, String> newCache = new ConcurrentHashMap<>();
         JSONObject jsonResult;
         JSONArray donations = null;
+        int lastId = PhantomBot.instance().getDataStore().GetInteger("settings", "", "DonationsCache_lastId");
 
         com.gmt2001.Console.debug.println("DonationsCache::updateCache");
 
-        jsonResult = TwitchAlertsAPIv1.instance().GetDonations();
+        jsonResult = TwitchAlertsAPIv1.instance().GetDonations(lastId);
 
         if (jsonResult.getBoolean("_success")) {
             if (jsonResult.getInt("_http") == 200) {
                 donations = jsonResult.getJSONArray("data");
-                for (int i = 0; i < donations.length(); i++) {
-                    newCache.put(donations.getJSONObject(i).get("donation_id").toString(), donations.getJSONObject(i).get("donation_id").toString());
-                }
-            } else {
-                try {
-                    throw new Exception("[HTTPErrorExecption] HTTP " + " " + jsonResult.getInt("_http") + ". req=" +
-                                        jsonResult.getString("_type") + " " + jsonResult.getString("_url") + "   " +
-                                        (jsonResult.has("message") && !jsonResult.isNull("message") ? "message=" +
-                                         jsonResult.getString("message") : "content=" + jsonResult.getString("_content")));
-                } catch (Exception ex) {
-                    /* Kill this cache if the streamlabs token is bad and disable the module. */
-                    if (ex.getMessage().contains("message=Unauthorized")) {
-                        com.gmt2001.Console.err.println("DonationsCache.updateCache: Bad API key disabling the StreamLabs module.");
-                        PhantomBot.instance().getDataStore().SetString("modules", "", "./handlers/donationHandler.js", "false");
-                    } else {
-                        com.gmt2001.Console.err.println("Donations.updateCache: Failed to update donations: " + ex.getMessage());
-                    }
-                    this.kill();
-                }
-            }
-        } else {
-            try {
-                throw new Exception("[" + jsonResult.getString("_exception") + "] " + jsonResult.getString("_exceptionMessage"));
-            } catch (Exception ex) {
-                if (ex.getMessage().startsWith("[SocketTimeoutException]") || ex.getMessage().startsWith("[IOException]")) {
-                    checkLastFail();
-                    com.gmt2001.Console.warn.println("DonationsCache.run: Failed to update donations: " + ex.getMessage());
-                }
+            } else if (jsonResult.optString("message", "").contains("Unauthorized")) {
+                com.gmt2001.Console.err.println("DonationsCache.updateCache: Bad API key disabling the StreamLabs module.");
+                PhantomBot.instance().getDataStore().SetString("modules", "", "./handlers/donationHandler.js", "false");
+                this.kill();
             }
         }
 
-        if (firstUpdate && !killed) {
-            firstUpdate = false;
-            EventBus.instance().post(new StreamLabsDonationInitializedEvent());
-        }
-
-        if (donations != null && !killed) {
+        if (donations != null && !this.killed) {
             for (int i = 0; i < donations.length(); i++) {
-                if (cache == null || !cache.containsKey(donations.getJSONObject(i).get("donation_id").toString())) {
-                    EventBus.instance().post(new StreamLabsDonationEvent(donations.getJSONObject(i).toString()));
+                int donationId = Integer.parseInt(donations.getJSONObject(i).get("donation_id").toString());
+                if (donationId > lastId) {
+                    lastId = donationId;
+                    if (!PhantomBot.instance().getDataStore().exists("donations", donations.getJSONObject(i).get("donation_id").toString())) {
+                        EventBus.instance().postAsync(new StreamLabsDonationEvent(donations.getJSONObject(i)));
+                    }
                 }
             }
         }
-        this.cache = newCache;
-    }
 
-    public void setCache(Map<String, String> cache) {
-        this.cache = cache;
-    }
+        if (this.firstUpdate && !this.killed) {
+            this.firstUpdate = false;
+            EventBus.instance().postAsync(new StreamLabsDonationInitializedEvent());
+        }
 
-    public Map<String, String> getCache() {
-        return cache;
+        PhantomBot.instance().getDataStore().SetInteger("settings", "", "DonationsCache_lastId", lastId);
     }
 
     public void kill() {
-        killed = true;
-    }
-
-    public static void killall() {
-        for (Entry<String, DonationsCache> instance : instances.entrySet()) {
-            instance.getValue().kill();
-        }
+        this.killed = true;
     }
 }

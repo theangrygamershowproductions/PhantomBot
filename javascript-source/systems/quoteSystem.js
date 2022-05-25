@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,6 +37,7 @@
         quote[3] = String(quote[3]).replace(/"/g, '\'\'');
 
         $.inidb.set('quotes', quoteid, JSON.stringify([String(quote[0]), String(quote[1]), String(quote[2]), String(quote[3])]));
+        $.panelsocketserver.sendJSONToAll(JSON.stringify({"query_id": "quote_update", "results": "update"}));
     }
 
     /**
@@ -47,15 +48,16 @@
      */
     function saveQuote(username, quote) {
         var newKey = $.inidb.GetKeyList('quotes', '').length,
-            game = ($.getGame($.channelName) != '' ? $.getGame($.channelName) : "Some Game");
+            game = (!$.javaString($.getGame($.channelName)).isBlank() ? $.getGame($.channelName) : "Some Game");
 
         if ($.inidb.exists('quotes', newKey)) {
             newKey++;
         }
         quote = String(quote).replace(/"/g, '\'\'');
         $.inidb.set('quotes', newKey, JSON.stringify([username, quote, $.systemTime(), game + '']));
+        $.panelsocketserver.sendJSONToAll(JSON.stringify({"query_id": "quote_update", "results": "update"}));
         return newKey;
-    };
+    }
 
     /**
      * @function deleteQuote
@@ -87,22 +89,33 @@
             }
             
             isDeleting = false;
+            $.panelsocketserver.sendJSONToAll(JSON.stringify({"query_id": "quote_update", "results": "update"}));
             return (quotes.length ? quotes.length : 0);
         } else {
             return -1;
         }
-    };
+    }
 
     /**
      * @function getQuote
-     * @param {Number} quoteId
+     * @param quoteId id or search query
      * @returns {Array}
      */
     function getQuote(quoteId) {
         var quote;
 
-        if (!quoteId || isNaN(quoteId)) {
+        if (!quoteId) {
             quoteId = $.rand($.inidb.GetKeyList('quotes', '').length);
+        } else if (isNaN(quoteId)) {
+            quoteId = String(quoteId).toLowerCase();
+            var quotes = $.inidb.GetKeyValueList('quotes', '');
+            var ids = [];
+            for (var i = 0; i < quotes.length; i++) {
+                if (String(quotes[i].getValue()).toLowerCase().indexOf(quoteId) >= 0) {
+                    ids.push(quotes[i].getKey());
+                }
+            }
+            quoteId = ids.length > 0 ? $.randElement(ids) : $.rand(quotes.length);
         }
 
         if ($.inidb.exists('quotes', quoteId)) {
@@ -112,10 +125,11 @@
         } else {
             return [];
         }
-    };
+    }
 
     /**
      * @event command
+     * @param event
      */
     $.bind('command', function(event) {
         var sender = event.getSender(),
@@ -192,13 +206,15 @@
                     $.say($.whisperPrefix(sender) + $.lang.get('quotesystem.add.usage2'));
                     return;
                 }
-                var target = args[0].toLowerCase();
-                if (!$.user.isKnown(target)) {
+                var useTwitchNames = ($.inidb.exists('settings', 'quoteTwitchNamesToggle')) ? $.inidb.GetBoolean('settings', '', 'quoteTwitchNamesToggle') : true;
+                var target = useTwitchNames ? args[0].toLowerCase() : args[0].substring(0, 1).toUpperCase() + args[0].substring(1).toLowerCase();
+                if (useTwitchNames && !$.user.isKnown(target)) {
                     $.say($.whisperPrefix(sender) + $.lang.get('common.user.404', target));
                     return;
                 }
                 quote = args.splice(1).join(' ');
-                $.say($.lang.get('quotesystem.add.success', $.username.resolve(target), saveQuote(String($.username.resolve(target)), quote)));
+                var username = useTwitchNames ? $.username.resolve(target) : target;
+                $.say($.lang.get('quotesystem.add.success', username, saveQuote(String(username), quote)));
                 $.log.event(sender + ' added a quote "' + quote + '".');
                 return;
             }
@@ -259,19 +275,20 @@
             quote = getQuote(args[0]);
             if (quote.length > 0) {
                 quoteStr = ($.inidb.exists('settings', 'quoteMessage') ? $.inidb.get('settings', 'quoteMessage') : $.lang.get('quotesystem.get.success'));
-                quoteStr = quoteStr.replace('(id)', (quote.length == 5 ? quote[4].toString() : quote[3].toString())).
+                quoteStr = quoteStr.replace('(id)', (quote.length === 5 ? quote[4].toString() : quote[3].toString())).
                 replace('(quote)', quote[1]).
-                replace('(user)', $.resolveRank(quote[0])).
-                replace('(game)', (quote.length == 5 ? quote[3] : "Some Game")).
-                replace('(date)', $.getLocalTimeString('dd-MM-yyyy', parseInt(quote[2])));
+                replace('(userrank)', $.resolveRank(quote[0])).
+                replace('(user)', $.username.resolve(quote[0])).
+                replace('(game)', (quote.length === 5 ? quote[3] : "Some Game")).
+                replace('(date)', $.getLocalTimeString($.getSetIniDbString('settings', 'quoteDateFormat', 'dd-MM-yyyy'), parseInt(quote[2])));
                 $.say(quoteStr);
             } else {
-                $.say($.whisperPrefix(sender) + $.lang.get('quotesystem.get.404', (typeof args[0] != 'undefined' ? args[0] : '')));
+                $.say($.whisperPrefix(sender) + $.lang.get('quotesystem.get.404', (typeof args[0] !== 'undefined' ? args[0] : '')));
             }
         }
 
         /**
-         * @commandpath quotemessage [message] - Sets the quote string with tags: (id) (quote) (user) (game) (date)
+         * @commandpath quotemessage [message] - Sets the quote string with tags: (id) (quote) (user) (userrank) (game) (date)
          */
         if (command.equalsIgnoreCase('quotemessage')) {
             if (!args[0]) {
@@ -283,6 +300,21 @@
             $.inidb.set('settings', 'quoteMessage', quoteStr);
             $.say($.whisperPrefix(sender) + $.lang.get('quotesystem.quotemessage.success'));
             $.log.event(sender + ' changed the quote message to: ' + quoteStr);
+        }
+
+        /**
+         * @commandpath quotedateformat [format] - Sets the date format for the (date) tag in a quote
+         */
+        if (command.equalsIgnoreCase('quotedateformat')) {
+            if (!args[0]) {
+                $.say($.whisperPrefix(sender) + $.lang.get('quotesystem.quotedateformat.usage', $.getSetIniDbString('settings', 'quoteDateFormat', 'dd-MM-yyyy')));
+                return;
+            }
+
+            quoteStr = args.splice(0).join(' ');
+            $.inidb.set('settings', 'quoteDateFormat', quoteStr);
+            $.say($.whisperPrefix(sender) + $.lang.get('quotesystem.quotedateformat.success'));
+            $.log.event(sender + ' changed the quote date format to: ' + quoteStr);
         }
 
         /**
@@ -300,12 +332,28 @@
             }
 
             var matchingKeys = $.inidb.searchByValue('quotes', searchString);
-            if (matchingKeys.length == 0) {
+            if (matchingKeys.length === 0) {
                 $.say($.whisperPrefix(sender) + $.lang.get('quotesystem.searchquote.404'));
                 return;
             }
 
             $.say($.whisperPrefix(sender) + $.lang.get('quotesystem.searchquote.found', matchingKeys.join(', ')));
+        }
+
+        /**
+         * @commandpath quotetwitchnamestoggle - Toggles on and off if quote names need to have been seen in chat before
+         */
+        if (command.equalsIgnoreCase('quotetwitchnamestoggle')) {
+            var useTwitchNames = $.inidb.GetBoolean('settings', '', 'quoteTwitchNamesToggle');
+            if (useTwitchNames) {
+                useTwitchNames = false;
+                $.inidb.set('settings', 'quoteTwitchNamesToggle', 'false');
+                $.say($.whisperPrefix(sender) + $.lang.get('quotesystem.twitchnames-disabled'));
+            } else {
+                useTwitchNames = true;
+                $.inidb.set('settings', 'quoteTwitchNamesToggle', 'true');
+                $.say($.whisperPrefix(sender) + $.lang.get('quotesystem.twitchnames-enabled'));
+            }
         }
     });
 
@@ -322,5 +370,7 @@
         $.registerChatCommand('./systems/quoteSystem.js', 'editquote', 2);
         $.registerChatCommand('./systems/quoteSystem.js', 'quote');
         $.registerChatCommand('./systems/quoteSystem.js', 'quotemessage', 1);
+        $.registerChatCommand('./systems/quoteSystem.js', 'quotedateformat', 1);
+        $.registerChatCommand('./systems/quoteSystem.js', 'quotetwitchnamestoggle', 1);
     });
 })();

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,22 +20,34 @@ import tv.phantombot.event.twitch.TwitchEvent;
 
 public abstract class TwitchFollowerEvent extends TwitchEvent {
     private final String follower;
+    private final String date;
 
     /**
      * Abstract constructor
      *
-     * @param {String} follower
+     * @param follower
+     * @param date
      */
-    protected TwitchFollowerEvent(String follower) {
+    protected TwitchFollowerEvent(String follower, String date) {
         this.follower = follower;
+        this.date = date;
     }
 
     /**
      * Method that returns the follower's username.
      *
-     * @param {String} follower
+     * @param follower
      */
     public String getFollower() {
         return this.follower;
+    }
+
+    /**
+     * Method that returns the follower's follow date.
+     *
+     * @param date
+     */
+    public String getFollowDate() {
+        return this.date;
     }
 }

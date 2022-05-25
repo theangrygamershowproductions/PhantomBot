@@ -1,7 +1,7 @@
 /* astyle --style=java --indent=spaces=4 */
 
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,13 +18,12 @@
  */
 package com.illusionaryone;
 
-import java.io.File;
-import java.io.InputStream;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-
+import java.io.InputStream;
 import java.net.URL;
 
 /*
@@ -39,7 +38,7 @@ public class ImgDownload {
      *
      * @param   String  HTTP URL to download from.
      * @param   String  The filename to save the remote image as.
-     * @return  String  Returns 'true' or 'false'.  As Rhino does not like Boolean, this is a String.
+     * @return  String  Returns 'true' or 'false'.  As Rhino does not like boolean, this is a String.
      */
     public static String downloadHTTPTo(String urlString, String location) {
         try {
@@ -76,7 +75,7 @@ public class ImgDownload {
      *
      * @param   String  HTTP URL to download from.
      * @param   String  The filename to save the remote image as.
-     * @return  String  Returns 'true' or 'false'.  As Rhino does not like Boolean, this is a String.
+     * @return  String  Returns 'true' or 'false'.  As Rhino does not like boolean, this is a String.
      */
     public static String downloadHTTP(String urlString, String filename) {
         return downloadHTTPTo(urlString, "./addons/downloadHTTP/" + filename);

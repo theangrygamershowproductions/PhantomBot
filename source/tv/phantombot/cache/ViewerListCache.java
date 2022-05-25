@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,32 +14,30 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package tv.phantombot.cache;
 
 import com.gmt2001.TwitchAPIv5;
-
 import java.util.ArrayList;
 import java.util.List;
-
-import org.json.JSONObject;
 import org.json.JSONArray;
-
-import tv.phantombot.event.irc.channel.IrcChannelUsersUpdateEvent;
+import org.json.JSONException;
+import org.json.JSONObject;
 import tv.phantombot.event.EventBus;
+import tv.phantombot.event.irc.channel.IrcChannelUsersUpdateEvent;
 
 public class ViewerListCache implements Runnable {
+
     private static ViewerListCache instance = null;
     private final String channelName;
     private final Thread thread;
-    private List<String> cache = new ArrayList<String>();
+    private List<String> cache = new ArrayList<>();
     private boolean isKilled = false;
 
     /**
      * Method to get this instance.
      *
-     * @param  {String} channelName
-     * @return {Object}
+     * @param channelName
+     * @return
      */
     public static synchronized ViewerListCache instance(String channelName) {
         if (instance == null) {
@@ -52,7 +50,7 @@ public class ViewerListCache implements Runnable {
     /**
      * Class constructor.
      *
-     * @param  {String} channelName
+     * @param channelName
      */
     private ViewerListCache(String channelName) {
         Thread.setDefaultUncaughtExceptionHandler(com.gmt2001.UncaughtExceptionHandler.instance());
@@ -60,7 +58,7 @@ public class ViewerListCache implements Runnable {
         this.channelName = channelName;
 
         this.thread = new Thread(this, "tv.phantombot.cache.ViewerListCache");
-        this.thread.setDefaultUncaughtExceptionHandler(com.gmt2001.UncaughtExceptionHandler.instance());
+        Thread.setDefaultUncaughtExceptionHandler(com.gmt2001.UncaughtExceptionHandler.instance());
         this.thread.start();
     }
 
@@ -72,13 +70,9 @@ public class ViewerListCache implements Runnable {
     public void run() {
         while (!isKilled) {
             try {
-                try {
-                    this.updateCache();
-                } catch (Exception ex) {
-                    com.gmt2001.Console.debug.println("ViewerListCache::run: " + ex.getMessage());
-                }
+                this.updateCache();
             } catch (Exception ex) {
-                com.gmt2001.Console.err.println("ViewerListCache::run: " + ex.getMessage());
+                com.gmt2001.Console.err.printStackTrace(ex);
             }
 
             try {
@@ -93,7 +87,7 @@ public class ViewerListCache implements Runnable {
      * Method that updates the cache.
      */
     private void updateCache() throws Exception {
-        String[] types = new String[] { "moderators", "staff", "admins", "vips", "viewers" };
+        String[] types = new String[]{"moderators", "staff", "admins", "vips", "viewers"};
         List<String> cache = new ArrayList<>();
         List<String> joins = new ArrayList<>();
         List<String> parts = new ArrayList<>();
@@ -132,7 +126,7 @@ public class ViewerListCache implements Runnable {
                     }
                 }
 
-                EventBus.instance().post(new IrcChannelUsersUpdateEvent(joins.toArray(new String[joins.size()]), parts.toArray(new String[parts.size()])));
+                EventBus.instance().postAsync(new IrcChannelUsersUpdateEvent(joins.toArray(new String[joins.size()]), parts.toArray(new String[parts.size()])));
                 // Set the new cache.
                 this.cache = cache;
                 // Delete the temp caches.
@@ -144,16 +138,16 @@ public class ViewerListCache implements Runnable {
             } else {
                 com.gmt2001.Console.debug.println("Failed to update viewers cache: " + object);
             }
-        } catch (Exception ex) {
-            com.gmt2001.Console.debug.println("ViewerListCache::updateCache: Failed to update: " + ex.getMessage());
+        } catch (JSONException ex) {
+            com.gmt2001.Console.err.printStackTrace(ex);
         }
     }
 
     /**
      * Method to check if a user is in the cache.
      *
-     * @param  {String} username
-     * @return {Boolean}
+     * @param username
+     * @return
      */
     public boolean hasUser(String username) {
         return (!this.cache.isEmpty() ? this.cache.contains(username) : true);
@@ -162,7 +156,7 @@ public class ViewerListCache implements Runnable {
     /**
      * Method to add users to the cache.
      *
-     * @param  {String} username
+     * @param username
      */
     public void addUser(String username) {
         this.cache.add(username);

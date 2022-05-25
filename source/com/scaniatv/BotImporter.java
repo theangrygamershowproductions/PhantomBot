@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,21 +22,18 @@
 package com.scaniatv;
 
 import com.gmt2001.datastore.DataStore;
-
+import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.BufferedReader;
-
 import java.util.ArrayList;
 import java.util.List;
-
 import tv.phantombot.PhantomBot;
 
 public class BotImporter {
     /*
      * Method that will import time and points from RevloBot.
      *
-     * @param {String} fileName
+     * @param fileName
      */
     public static void ImportRevlo(String fileName) {
         DataStore db = PhantomBot.instance().getDataStore();
@@ -84,7 +81,7 @@ public class BotImporter {
     /*
      * Method that will import time and points from AnkhBot.
      *
-     * @param {String} fileName
+     * @param fileName
      */
     public static void ImportAnkh(String fileName) {
         DataStore db = PhantomBot.instance().getDataStore();

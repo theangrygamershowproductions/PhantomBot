@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,17 +20,32 @@ import com.gmt2001.httpwsserver.WebSocketFrameHandler;
 import com.gmt2001.httpwsserver.WsFrameHandler;
 import com.gmt2001.httpwsserver.auth.WsAuthenticationHandler;
 import com.gmt2001.httpwsserver.auth.WsSharedRWTokenAuthenticationHandler;
+import com.scaniatv.LangFileUpdater;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONStringer;
+import tv.phantombot.CaselessProperties;
 import tv.phantombot.PhantomBot;
+import tv.phantombot.RepoVersion;
+import tv.phantombot.cache.TwitchCache;
+import tv.phantombot.discord.DiscordAPI;
 import tv.phantombot.event.EventBus;
 import tv.phantombot.event.webpanel.websocket.WebPanelSocketUpdateEvent;
 
@@ -45,7 +60,7 @@ public class WsPanelHandler implements WsFrameHandler {
     private final WsAuthenticationHandler authHandler;
 
     public WsPanelHandler(String panelAuthRO, String panelAuth) {
-        authHandler = new WsSharedRWTokenAuthenticationHandler(panelAuthRO, panelAuth, 10);
+        this.authHandler = new WsSharedRWTokenAuthenticationHandler(panelAuthRO, panelAuth, 10);
     }
 
     @Override
@@ -73,6 +88,10 @@ public class WsPanelHandler implements WsFrameHandler {
                 return;
             }
 
+            if (CaselessProperties.instance().getPropertyAsBoolean("wsdebug", false)) {
+                com.gmt2001.Console.debug.println(jso.toString());
+            }
+
             if (!ctx.channel().attr(WsSharedRWTokenAuthenticationHandler.ATTR_IS_READ_ONLY).get()) {
                 handleRestrictedCommands(ctx, frame, jso);
             }
@@ -94,6 +113,8 @@ public class WsPanelHandler implements WsFrameHandler {
             handleDBDelKey(ctx, frame, jso);
         } else if (jso.has("socket_event")) {
             handleSocketEvent(ctx, frame, jso);
+        } else if (jso.has("discordchannellist")) {
+            handleDiscordChannelList(ctx, frame, jso);
         }
     }
 
@@ -105,7 +126,7 @@ public class WsPanelHandler implements WsFrameHandler {
         if (command.charAt(0) == '!') {
             command = command.substring(1);
         }
-        
+
         if (!jso.has("command_sync")) {
             PhantomBot.instance().handleCommand(username, command);
         } else {
@@ -206,14 +227,51 @@ public class WsPanelHandler implements WsFrameHandler {
             }
         }
 
-        EventBus.instance().post(new WebPanelSocketUpdateEvent(uniqueID, script, arguments, args));
+        EventBus.instance().postAsync(new WebPanelSocketUpdateEvent(uniqueID, script, arguments, args));
         jsonObject.object().key("query_id").value(uniqueID).endObject();
         WebSocketFrameHandler.sendWsFrame(ctx, frame, WebSocketFrameHandler.prepareTextWebSocketResponse(jsonObject.toString()));
+    }
+
+    private void handleDiscordChannelList(ChannelHandlerContext ctx, WebSocketFrame frame, JSONObject jso) {
+        HashMap<String, Map<String, String>> data = new HashMap<>();
+        DiscordAPI.instance().getAllChannelInfoAsync(data).doOnComplete(() -> {
+            String uniqueID = jso.has("discordchannellist") ? jso.getString("discordchannellist") : "";
+
+            JSONStringer jsonObject = new JSONStringer();
+            jsonObject.object().key("query_id").value(uniqueID);
+            jsonObject.key("results").object().key("data").object();
+
+            data.forEach((category, channels) -> {
+                jsonObject.key(category).object();
+                channels.forEach((channel, info) -> {
+                    if (channel.equals("name")) {
+                        jsonObject.key(channel).value(info);
+                    } else {
+                        try {
+                            jsonObject.key(channel).object();
+                            String[] sinfo = info.split(":", 2);
+                            jsonObject.key("type").value(sinfo[0]);
+                            jsonObject.key("name").value(sinfo[1]);
+                        } catch (IndexOutOfBoundsException ex) {
+                            com.gmt2001.Console.err.printStackTrace(ex);
+                        } finally {
+                            jsonObject.endObject();
+                        }
+                    }
+                });
+                jsonObject.endObject();
+            });
+
+            jsonObject.endObject().endObject().endObject();
+            WebSocketFrameHandler.sendWsFrame(ctx, frame, WebSocketFrameHandler.prepareTextWebSocketResponse(jsonObject.toString()));
+        }).subscribe();
     }
 
     private void handleUnrestrictedCommands(ChannelHandlerContext ctx, WebSocketFrame frame, JSONObject jso) {
         if (jso.has("version")) {
             handleVersion(ctx, frame, jso);
+        } else if (jso.has("remote")) {
+            handleRemote(ctx, frame, jso);
         } else if (jso.has("dbquery")) {
             handleDBQuery(ctx, frame, jso);
         } else if (jso.has("dbkeys")) {
@@ -236,8 +294,88 @@ public class WsPanelHandler implements WsFrameHandler {
 
         jsonObject.object().key("versionresult").value(uniqueID);
         jsonObject.key("version").value(version);
+        jsonObject.key("version-data").object().key("version").value(RepoVersion.getPhantomBotVersion()).key("commit").value(RepoVersion.getRepoVersion());
+        jsonObject.key("build-type").value(RepoVersion.getBuildType()).key("panel-version").value(RepoVersion.getPanelVersion()).endObject();
         jsonObject.key("java-version").value(System.getProperty("java.runtime.version"));
         jsonObject.key("os-version").value(System.getProperty("os.name"));
+        jsonObject.key("autorefreshoauth").value(CaselessProperties.instance().getProperty("clientsecret") != null && !CaselessProperties.instance().getProperty("clientsecret").isBlank());
+        jsonObject.endObject();
+        WebSocketFrameHandler.sendWsFrame(ctx, frame, WebSocketFrameHandler.prepareTextWebSocketResponse(jsonObject.toString()));
+    }
+
+    private void handleRemote(ChannelHandlerContext ctx, WebSocketFrame frame, JSONObject jso) {
+        JSONStringer jsonObject = new JSONStringer();
+        String uniqueID = jso.has("id") ? jso.getString("id") : "";
+        String query = jso.has("query") ? jso.getString("query") : "";
+
+        jsonObject.object().key("id").value(uniqueID);
+        jsonObject.key("query_id").value(uniqueID);
+
+        if (query.equalsIgnoreCase("panelSettings")) {
+            jsonObject.key("channelName").value(PhantomBot.instance().getChannelName());
+            jsonObject.key("botName").value(PhantomBot.instance().getBotName());
+            jsonObject.key("displayName").value(TwitchCache.instance().getDisplayName());
+        } else if (query.equalsIgnoreCase("userLogo")) {
+            jsonObject.key("results").array();
+            try ( InputStream inputStream = Files.newInputStream(Paths.get("./web/panel/img/logo.jpeg"))) {
+                ByteBuf buf = Unpooled.copiedBuffer(inputStream.readAllBytes());
+                ByteBuf buf2 = Base64.encode(buf);
+                jsonObject.object().key("logo").value(buf2.toString(Charset.forName("UTF-8"))).endObject();
+                buf2.release();
+                buf.release();
+            } catch (IOException ex) {
+                jsonObject.object().key("errors").array().object()
+                        .key("status").value("500")
+                        .key("title").value("Internal Server Error")
+                        .key("detail").value("IOException: " + ex.getMessage())
+                        .endObject().endArray().endObject();
+                com.gmt2001.Console.err.printStackTrace(ex);
+            }
+            jsonObject.endArray();
+        } else if (query.equalsIgnoreCase("loadLang")) {
+            jsonObject.key("results").array().object();
+            jsonObject.key("langFile").value(LangFileUpdater.getCustomLang(jso.getJSONObject("params").getString("lang-path")));
+            jsonObject.endObject().endArray();
+        } else if (query.equalsIgnoreCase("saveLang")) {
+            jsonObject.key("results").array();
+            if (!ctx.channel().attr(WsSharedRWTokenAuthenticationHandler.ATTR_IS_READ_ONLY).get()) {
+                LangFileUpdater.updateCustomLang(jso.getJSONObject("params").getString("content"), jso.getJSONObject("params").getString("lang-path"), jsonObject);
+            } else {
+                jsonObject.object().key("errors").array().object()
+                        .key("status").value("403")
+                        .key("title").value("Forbidden")
+                        .key("detail").value("Read-only Connection")
+                        .endObject().endArray().endObject();
+            }
+            jsonObject.endArray();
+        } else if (query.equalsIgnoreCase("getLangList")) {
+            jsonObject.key("results").array();
+            for (String langFile : LangFileUpdater.getLangFiles()) {
+                jsonObject.value(langFile);
+            }
+            jsonObject.endArray();
+        } else if (query.equalsIgnoreCase("games")) {
+            jsonObject.key("results").array();
+            try {
+                String data = Files.readString(Paths.get("./web/panel/js/utils/gamesList.txt"));
+                String search = jso.getJSONObject("params").getString("search").toLowerCase();
+
+                for (String g : data.split("\n")) {
+                    if (g.toLowerCase().startsWith(search)) {
+                        jsonObject.value(g.replace("\r", ""));
+                    }
+                }
+            } catch (IOException ex) {
+                jsonObject.object().key("errors").array().object()
+                        .key("status").value("500")
+                        .key("title").value("Internal Server Error")
+                        .key("detail").value("IOException: " + ex.getMessage())
+                        .endObject().endArray().endObject();
+                com.gmt2001.Console.err.printStackTrace(ex);
+            }
+            jsonObject.endArray();
+        }
+
         jsonObject.endObject();
         WebSocketFrameHandler.sendWsFrame(ctx, frame, WebSocketFrameHandler.prepareTextWebSocketResponse(jsonObject.toString()));
     }
@@ -402,27 +540,43 @@ public class WsPanelHandler implements WsFrameHandler {
     }
 
     public void sendJSONToAll(String jsonString) {
-        WebSocketFrameHandler.broadcastWsFrame("/ws/panel", WebSocketFrameHandler.prepareTextWebSocketResponse(jsonString));
+        try {
+            WebSocketFrameHandler.broadcastWsFrame("/ws/panel", WebSocketFrameHandler.prepareTextWebSocketResponse(jsonString));
+        } catch (Exception ex) {
+            com.gmt2001.Console.err.printStackTrace(ex);
+        }
     }
 
     public void triggerAudioPanel(String audioHook) {
-        JSONStringer jsonObject = new JSONStringer();
-        jsonObject.object().key("audio_panel_hook").value(audioHook).endObject();
-        sendJSONToAll(jsonObject.toString());
+        try {
+            JSONStringer jsonObject = new JSONStringer();
+            jsonObject.object().key("audio_panel_hook").value(audioHook).endObject();
+            sendJSONToAll(jsonObject.toString());
+        } catch (JSONException ex) {
+            com.gmt2001.Console.err.printStackTrace(ex);
+        }
     }
 
     public void doAudioHooksUpdate() {
-        JSONObject jso = new JSONObject();
-        JSONObject query = new JSONObject();
-        query.put("table", "audio_hooks");
-        jso.put("query", query);
-        jso.put("dbkeys", "audio_hook_reload");
-        handleDBKeysQuery(null, null, jso);
+        try {
+            JSONObject jso = new JSONObject();
+            JSONObject query = new JSONObject();
+            query.put("table", "audio_hooks");
+            jso.put("query", query);
+            jso.put("dbkeys", "audio_hook_reload");
+            handleDBKeysQuery(null, null, jso);
+        } catch (JSONException ex) {
+            com.gmt2001.Console.err.printStackTrace(ex);
+        }
     }
 
     public void alertImage(String imageInfo) {
-        JSONStringer jsonObject = new JSONStringer();
-        jsonObject.object().key("alert_image").value(imageInfo).endObject();
-        sendJSONToAll(jsonObject.toString());
+        try {
+            JSONStringer jsonObject = new JSONStringer();
+            jsonObject.object().key("alert_image").value(imageInfo).endObject();
+            sendJSONToAll(jsonObject.toString());
+        } catch (JSONException ex) {
+            com.gmt2001.Console.err.printStackTrace(ex);
+        }
     }
 }

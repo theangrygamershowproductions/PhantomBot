@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -58,7 +58,7 @@
             donationUsername = paramObj.getJSONObject('user').getString('username'),
             donationCurrency = paramObj.getString('currency'),
             donationMessage = (paramObj.has('message') ? paramObj.getString('message') : ''),
-            donationAmount = paramObj.getInt('amount'),
+            donationAmount = paramObj.getFloat('amount'),
             s = message;
 
         if ($.inidb.exists('discordDonations', 'streamelements' + donationID)) {
@@ -76,11 +76,11 @@
         }
 
         if (s.match(/\(amount\)/)) {
-            s = $.replace(s, '(amount)', String(parseInt(donationAmount.toFixed(2))));
+            s = $.replace(s, '(amount)', String(donationAmount.toFixed(2)));
         }
 
         if (s.match(/\(amount\.toFixed\(0\)\)/)) {
-            s = $.replace(s, '(amount.toFixed(0))', String(parseInt(donationAmount.toFixed(0))));
+            s = $.replace(s, '(amount.toFixed(0))', String(donationAmount.toFixed(0)));
         }
 
         if (s.match(/\(message\)/)) {
@@ -148,9 +148,9 @@
                     return;
                 }
 
-                channelName = subAction.replace('#', '').toLowerCase();
+                channelName = $.discord.sanitizeChannelName(subAction);
                 $.inidb.set('discordSettings', 'streamelementsChannel', channelName);
-                $.discord.say(channel, $.discord.userPrefix(mention) + $.lang.get('discord.streamelementshandler.channel.set', channelName));
+                $.discord.say(channel, $.discord.userPrefix(mention) + $.lang.get('discord.streamelementshandler.channel.set', subAction));
             }
         }
     });

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -357,20 +357,21 @@
                     $.say($.whisperPrefix(sender) + $.lang.get('ytplayer.command.importpl.file.start'));
                     importedList = $.readFile("./addons/youtubePlayer/" + fileName);
                     for (var i = 0; i < importedList.length; i++) {
-                        if (importedList[i].contains('&list')) {
+                        var item = $.jsString(importedList[i]);
+                        if (item.includes('&list')) {
                             playlistFailCount++;
                             continue;
-                        } else if (spaceMacther.test(importedList[i]) || importedList[i].isEmpty()) { // match for spaces or an empty line.
+                        } else if (spaceMacther.test(item) || item.trim().length === 0) { // match for spaces or an empty line.
                             failCount++;
                             continue;
                         }
 
                         try {
-                            var youtubeVideo = new YoutubeVideo(importedList[i], 'importPlaylistFile');
+                            var youtubeVideo = new YoutubeVideo(item, 'importPlaylistFile');
                             $.inidb.set(playlistDbPrefix + listName, importCount, youtubeVideo.getVideoId());
                             importCount++;
                         } catch (ex) {
-                            $.log.error("importPlaylistFile::skipped [" + importedList[i] + "]: " + ex);
+                            $.log.error("importPlaylistFile::skipped [" + item + "]: " + ex);
                             failCount++;
                         }
                     }
@@ -1125,7 +1126,7 @@
         var EventBus = Packages.tv.phantombot.event.EventBus,
             CommandEvent = Packages.tv.phantombot.event.command.CommandEvent;
 
-        EventBus.instance().post(new CommandEvent($.botName, 'ytp', 'togglerandom'));
+        EventBus.instance().postAsync(new CommandEvent($.botName, 'ytp', 'togglerandom'));
     });
 
     /**
@@ -1150,7 +1151,7 @@
      */
     $.bind('yTPlayerStealSong', function(event) {
         var youTubeID = (event.getYouTubeID() + ''),
-            refundUser = (event.getRequester() + ''),
+            refundUser = $.jsString(event.getRequester()).toLowerCase(),
             retval;
 
         if (youTubeID.length > 1) {
@@ -2067,7 +2068,7 @@
                     if (currentPlaylist.getRequestAtIndex(minRange) == null) {
                         break;
                     }
-                    displayString += "[(#" + showRange + ") " + currentPlaylist.getRequestAtIndex(minRange).getVideoTitle().substr(0, 20) + "] ";
+                    displayString += "[(#" + showRange + ") " + currentPlaylist.getRequestAtIndex(minRange).getVideoTitle().slice(0, 20) + "] ";
                     minRange++;
                 }
                 if (displayString.equals('')) {

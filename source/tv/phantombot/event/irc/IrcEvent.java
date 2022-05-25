@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,7 +17,6 @@
 package tv.phantombot.event.irc;
 
 import tv.phantombot.event.Event;
-
 import tv.phantombot.twitch.irc.TwitchSession;
 
 public abstract class IrcEvent extends Event {
@@ -26,7 +25,7 @@ public abstract class IrcEvent extends Event {
     /**
      * Class constructor
      *
-     * @param {TwitchSession} session
+     * @param session
      */
     protected IrcEvent(TwitchSession session) {
         this.session = session;
@@ -35,7 +34,7 @@ public abstract class IrcEvent extends Event {
     /**
      * Method that returns the session.
      *
-     * @param {TwitchSession} session
+     * @param session
      */
     public TwitchSession getSession() {
         return this.session;

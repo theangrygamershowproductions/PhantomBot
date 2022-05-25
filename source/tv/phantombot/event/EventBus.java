@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,17 +16,17 @@
  */
 package tv.phantombot.event;
 
+import net.engio.mbassy.bus.MBassador;
 import net.engio.mbassy.bus.config.BusConfiguration;
 import net.engio.mbassy.bus.config.Feature;
-import net.engio.mbassy.bus.SyncMessageBus;
-
-import net.engio.mbassy.bus.MBassador;
-
 import tv.phantombot.PhantomBot;
 
-public class EventBus {
+public final class EventBus {
+
     private static final EventBus instance = new EventBus();
-    private static final MBassador<Event> bus = new MBassador<Event>(new BusConfiguration().addFeature(Feature.SyncPubSub.Default()).addFeature(Feature.AsynchronousHandlerInvocation.Default()).addFeature(Feature.AsynchronousMessageDispatch.Default().setNumberOfMessageDispatchers(10)).addPublicationErrorHandler(new ExceptionHandler()));
+    private static final MBassador<Event> bus = new MBassador<>(new BusConfiguration().addFeature(Feature.SyncPubSub.Default())
+            .addFeature(Feature.AsynchronousHandlerInvocation.Default()).addFeature(Feature.AsynchronousMessageDispatch.Default()
+            .setNumberOfMessageDispatchers(10)).addPublicationErrorHandler(new ExceptionHandler()));
 
     /**
      * Class constructor.
@@ -38,7 +38,7 @@ public class EventBus {
     /**
      * Method that returns this instance
      *
-     * @return {EventBus}
+     * @return
      */
     public static EventBus instance() {
         return instance;
@@ -47,7 +47,7 @@ public class EventBus {
     /**
      * Method that registers a listener with the bus.
      *
-     * @param {Listener} listener
+     * @param listener
      */
     public void register(Listener listener) {
         bus.subscribe(listener);
@@ -56,7 +56,7 @@ public class EventBus {
     /**
      * Method that removes a listener from the bus.
      *
-     * @param {Listener} listener
+     * @param listener
      */
     public void unregister(Listener listener) {
         bus.unsubscribe(listener);
@@ -65,7 +65,7 @@ public class EventBus {
     /**
      * Method that posts an event in sync.
      *
-     * @param {Event} event
+     * @param event
      */
     public void post(Event event) {
         if (PhantomBot.isInExitState()) {
@@ -78,7 +78,7 @@ public class EventBus {
     /**
      * Method that posts an event in async.
      *
-     * @param {Event} event
+     * @param event
      */
     public void postAsync(Event event) {
         if (PhantomBot.isInExitState()) {

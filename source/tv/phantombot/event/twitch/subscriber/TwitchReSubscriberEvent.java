@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,36 +22,26 @@ public class TwitchReSubscriberEvent extends TwitchEvent {
     private final String resubscriber;
     private final String months;
     private final String plan;
+    private final String message;
 
     /**
      * Class constructor.
      *
-     * @param {String} resubscriber
-     * @param {String} months
+     * @param resubscriber
+     * @param months
+     * @param plan
      */
-    public TwitchReSubscriberEvent(String resubscriber, String months) {
-        this.resubscriber = resubscriber;
-        this.months = months;
-        this.plan = null;
-    }
-
-    /**
-     * Class constructor.
-     *
-     * @param {String} resubscriber
-     * @param {String} months
-     * @param {String} plan
-     */
-    public TwitchReSubscriberEvent(String resubscriber, String months, String plan) {
+    public TwitchReSubscriberEvent(String resubscriber, String months, String plan, String message) {
         this.resubscriber = resubscriber;
         this.months = months;
         this.plan = plan;
+        this.message = message;
     }
 
     /**
      * Method that returns the resubscriber.
      *
-     * @return {String} resubscriber
+     * @return resubscriber
      */
     public String getReSubscriber() {
         return this.resubscriber;
@@ -60,7 +50,7 @@ public class TwitchReSubscriberEvent extends TwitchEvent {
     /**
      * Method that returns the resub months.
      *
-     * @return {String} months
+     * @return months
      */
     public String getMonths() {
         return this.months;
@@ -69,9 +59,13 @@ public class TwitchReSubscriberEvent extends TwitchEvent {
     /**
      * Method that returns the subcription plan. (1000, 2000, 3000 and Prime)
      *
-     * @return {String} plan
+     * @return plan
      */
     public String getPlan() {
         return this.plan;
+    }
+    
+    public String getMessage() {
+        return this.message;
     }
 }

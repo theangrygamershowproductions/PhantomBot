@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,18 +16,13 @@
  */
 package tv.phantombot;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.jar.Attributes;
-import java.util.jar.JarFile;
-import java.util.jar.Manifest;
-
-public class RepoVersion {
+public final class RepoVersion {
 
     private static final String phantomBotVersion = "@phantombot.version@";
     private static final String repoVersion = "@repository.version@";
     private static final String buildType = "@buildtype@";
     private static final String panelVersion = "@webpanel.version@";
+    private static final boolean isDocker = false;
 
     private RepoVersion() {
     }
@@ -44,15 +39,23 @@ public class RepoVersion {
         return buildType;
     }
 
-    public static boolean getNightlyBuild() {
+    public static String getBuildTypeWithDocker() {
+        return buildType + (isDocker ? "_docker" : "");
+    }
+
+    public static boolean isNightlyBuild() {
         return buildType.equals("nightly_build");
     }
 
-    public static boolean getPrereleaseBuild() {
+    public static boolean isPrereleaseBuild() {
         return buildType.equals("prerelease_build");
     }
 
     public static String getPanelVersion() {
         return panelVersion;
+    }
+
+    public static boolean isDocker() {
+        return isDocker;
     }
 }

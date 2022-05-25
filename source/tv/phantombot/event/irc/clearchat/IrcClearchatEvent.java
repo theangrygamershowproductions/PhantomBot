@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,7 +17,6 @@
 package tv.phantombot.event.irc.clearchat;
 
 import tv.phantombot.event.irc.IrcEvent;
-
 import tv.phantombot.twitch.irc.TwitchSession;
 
 public class IrcClearchatEvent extends IrcEvent {
@@ -28,10 +27,10 @@ public class IrcClearchatEvent extends IrcEvent {
     /**
      * Class constructor
      *
-     * @param {TwitchSession} session
-     * @param {String}  username
-     * @param {String}  reason
-     * @param {String}  duration
+     * @param session
+     * @param  username
+     * @param  reason
+     * @param  duration
      */
     public IrcClearchatEvent(TwitchSession session, String username, String reason, String duration) {
         super(session);
@@ -44,7 +43,7 @@ public class IrcClearchatEvent extends IrcEvent {
     /**
      * Method that returns the user who was timed-out
      *
-     * @return {String} username
+     * @return username
      */
     public String getUsername() {
         return this.username;
@@ -53,7 +52,7 @@ public class IrcClearchatEvent extends IrcEvent {
     /**
      * Method that returns the reason the user was timed-out
      *
-     * @return {String} reason
+     * @return reason
      */
     public String getReason() {
         return this.reason;
@@ -62,7 +61,7 @@ public class IrcClearchatEvent extends IrcEvent {
     /**
      * Method that returns the length the user was timed-out
      *
-     * @return {String} duration
+     * @return duration
      */
     public String getDuration() {
         return this.duration;

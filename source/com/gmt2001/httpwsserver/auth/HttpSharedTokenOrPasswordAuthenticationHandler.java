@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -61,6 +61,7 @@ public class HttpSharedTokenOrPasswordAuthenticationHandler implements HttpAuthe
      * Constructor
      *
      * @param token The authorization token that grants access
+     * @param password The password that also grants access
      */
     public HttpSharedTokenOrPasswordAuthenticationHandler(String token, String password) {
         this.token = token;
@@ -71,8 +72,8 @@ public class HttpSharedTokenOrPasswordAuthenticationHandler implements HttpAuthe
      * Checks if the given {@link FullHttpRequest} has the correct header with valid credentials
      *
      * @param ctx The {@link ChannelHandlerContext} of the session
-     * @param frame The {@link FullHttpRequest} to check
-     * @return {@code true} if authenticated, {@code false} otherwise. When returning {@code false}, this method will also reply with
+     * @param req The {@link FullHttpRequest} to check
+     * @return, this method will also reply with
      * {@code 401 Unauthorized} and then close the channel
      */
     @Override
@@ -83,6 +84,7 @@ public class HttpSharedTokenOrPasswordAuthenticationHandler implements HttpAuthe
         String auth1 = headers.get("password");
         String auth2 = headers.get("webauth");
         String auth3 = qsd.parameters().getOrDefault("webauth", NOARG).get(0);
+        String astr = auth1 != null ? auth1 : (auth2 != null ? auth2 : (auth3 != null ? auth3 : ""));
 
         if ((auth1 != null && (auth1.equals(password) || auth1.equals("oauth:" + password))) || (auth2 != null && auth2.equals(token)) || (auth3 != null && auth3.equals(token))) {
             return true;
@@ -94,7 +96,10 @@ public class HttpSharedTokenOrPasswordAuthenticationHandler implements HttpAuthe
         buf.release();
         HttpUtil.setContentLength(res, res.content().readableBytes());
 
-        com.gmt2001.Console.debug.println("403");
+        com.gmt2001.Console.debug.println("401");
+        com.gmt2001.Console.debug.println("Expected (p): >oauth:" + password + "<");
+        com.gmt2001.Console.debug.println("Expected (t): >" + token + "<");
+        com.gmt2001.Console.debug.println("Got: >" + astr + "<");
 
         res.headers().set(CONNECTION, CLOSE);
         ctx.writeAndFlush(res).addListener(ChannelFutureListener.CLOSE);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@ public class YTPlayerLoadPlaylistEvent extends YTPlayerEvent {
     /**
      * Class constructor.
      *
-     * @param {String} playlist
+     * @param playlist
      */
     public YTPlayerLoadPlaylistEvent(String playlist) {
         this.playlist = playlist;
@@ -31,7 +31,7 @@ public class YTPlayerLoadPlaylistEvent extends YTPlayerEvent {
     /**
      * Method that gets the playlist name.
      *
-     * @return {String} playlist
+     * @return playlist
      */
     public String getPlaylist() {
         return this.playlist;

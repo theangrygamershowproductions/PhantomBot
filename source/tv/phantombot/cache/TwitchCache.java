@@ -1,7 +1,7 @@
 /* astyle --style=java --indent=spaces=4 --mode=java */
 
-/*
- * Copyright (C) 2016-2019 phantombot.tv
+ /*
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,71 +17,70 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/*
+ /*
  * @author illusionaryone
  */
-
 package tv.phantombot.cache;
-
-import java.lang.Math;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.List;
-import java.util.TimeZone;
-
-import org.json.JSONArray;
-import org.json.JSONObject;
 
 import com.gmt2001.TwitchAPIv5;
 import com.illusionaryone.ImgDownload;
 import java.io.File;
+import java.io.IOException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.TimeZone;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.io.FileUtils;
+import org.json.JSONArray;
 import org.json.JSONException;
-
+import org.json.JSONObject;
 import tv.phantombot.PhantomBot;
 import tv.phantombot.event.EventBus;
-import tv.phantombot.event.twitch.online.TwitchOnlineEvent;
-import tv.phantombot.event.twitch.offline.TwitchOfflineEvent;
-import tv.phantombot.event.twitch.gamechange.TwitchGameChangeEvent;
 import tv.phantombot.event.twitch.clip.TwitchClipEvent;
+import tv.phantombot.event.twitch.gamechange.TwitchGameChangeEvent;
+import tv.phantombot.event.twitch.offline.TwitchOfflineEvent;
+import tv.phantombot.event.twitch.online.TwitchOnlineEvent;
 import tv.phantombot.event.twitch.titlechange.TwitchTitleChangeEvent;
+import tv.phantombot.twitch.api.Helix;
 
 /**
  * TwitchCache Class
  *
- * This class keeps track of certain Twitch information such as if the channel is online or not
- * and sends events to the JS side to indicate when the channel has gone off or online.
+ * This class keeps track of certain Twitch information such as if the channel is online or not and sends events to the JS side to indicate when the
+ * channel has gone off or online.
  */
-public class TwitchCache implements Runnable {
+public final class TwitchCache implements Runnable {
 
     private static final Map<String, TwitchCache> instances = new ConcurrentHashMap<>();
     private final String channel;
     private final Thread updateThread;
     private boolean killed = false;
+    private static final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
 
     /* Cached data */
-    private Boolean isOnline = false;
-    private Boolean forcedGameTitleUpdate = false;
-    private Boolean forcedStreamTitleUpdate = false;
+    private boolean isOnline = false;
+    private boolean isOnlinePS = false;
+    private boolean gotOnlineFromPS = false;
+    private boolean forcedGameTitleUpdate = false;
+    private boolean forcedStreamTitleUpdate = false;
     private String streamCreatedAt = "";
     private String gameTitle = "Some Game";
     private String streamTitle = "Some Title";
     private String previewLink = "https://www.twitch.tv/p/assets/uploads/glitch_solo_750x422.png";
     private String logoLink = "https://www.twitch.tv/p/assets/uploads/glitch_solo_750x422.png";
-    private String[] communities = new String[3];
     private long streamUptimeSeconds = 0L;
     private int viewerCount = 0;
     private int views = 0;
+    private String displayName;
 
     /**
      * Creates an instance for a channel.
      *
-     * @param   channel      Name of the Twitch Channel for which this instance is created.
-     * @return  TwitchCache  The new TwitchCache instance object.
+     * @param channel Name of the Twitch Channel for which this instance is created.
+     * @return TwitchCache The new TwitchCache instance object.
      */
     public static TwitchCache instance(String channel) {
         TwitchCache instance = instances.get(channel);
@@ -93,10 +92,18 @@ public class TwitchCache implements Runnable {
         return instance;
     }
 
+    public static TwitchCache instance() {
+        return instance(PhantomBot.instance().getChannelName());
+    }
+
+    static {
+        dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
+    }
+
     /**
      * Constructor for TwitchCache object.
      *
-     * @param  channel  Name of the Twitch Channel for which this object is created.
+     * @param channel Name of the Twitch Channel for which this object is created.
      */
     @SuppressWarnings("CallToThreadStartDuringObjectConstruction")
     private TwitchCache(String channel) {
@@ -105,6 +112,7 @@ public class TwitchCache implements Runnable {
         }
 
         this.channel = channel;
+        this.displayName = channel;
         this.updateThread = new Thread(this, "tv.phantombot.cache.TwitchCache");
 
         Thread.setDefaultUncaughtExceptionHandler(com.gmt2001.UncaughtExceptionHandler.instance());
@@ -114,9 +122,8 @@ public class TwitchCache implements Runnable {
     }
 
     /**
-     * Thread run instance.  This is the main loop for the thread that is created to manage
-     * retrieving data from the Twitch API.  This loop runs every 30 seconds, querying data
-     * from Twitch.
+     * Thread run instance. This is the main loop for the thread that is created to manage retrieving data from the Twitch API. This loop runs every
+     * 30 seconds, querying data from Twitch.
      */
     @Override
     @SuppressWarnings("SleepWhileInLoop")
@@ -135,32 +142,28 @@ public class TwitchCache implements Runnable {
         boolean doUpdateClips = false;
 
         /* Check the DB for a previous Game and Stream Title */
-        String gameTitle = getDBString("game");
-        String streamTitle = getDBString("title");
+        String gameTitlen = getDBString("game");
+        String streamTitlen = getDBString("title");
 
-        if (gameTitle != null) {
-            this.gameTitle = gameTitle;
+        if (gameTitlen != null) {
+            this.gameTitle = gameTitlen;
         }
-        if (streamTitle != null) {
-            this.streamTitle = streamTitle;
+        if (streamTitlen != null) {
+            this.streamTitle = streamTitlen;
         }
 
         while (!killed) {
             try {
-                try {
-                    this.updateCache();
-                } catch (Exception ex) {
-                    com.gmt2001.Console.debug.println("TwitchCache::run: " + ex.getMessage());
-                }
+                this.updateCache();
             } catch (Exception ex) {
-                com.gmt2001.Console.err.println("TwitchCache::run: " + ex.getMessage());
+                com.gmt2001.Console.err.printStackTrace(ex);
             }
 
             if (doUpdateClips) {
                 doUpdateClips = false;
                 try {
                     updateClips();
-                } catch (JSONException ex) {
+                } catch (ParseException | JSONException ex) {
                     com.gmt2001.Console.err.logStackTrace(ex);
                 }
             } else {
@@ -176,14 +179,12 @@ public class TwitchCache implements Runnable {
     }
 
     /**
-     * Polls the Clips endppint, trying to find the most recent clip.  Note that because Twitch
-     * reports by the viewcount, and has a limit of 100 clips, it is possible to miss the most
-     * recent clip until it has views.
+     * Polls the Clips endpoint, trying to find the most recent clip. Note that because Twitch reports by the viewcount, and has a limit of 100 clips,
+     * it is possible to miss the most recent clip until it has views.
      *
-     * We do not throw an exception because this is not a critical function unlike the gathering
-     * of data via the updateCache() method.
+     * We do not throw an exception because this is not a critical function unlike the gathering of data via the updateCache() method.
      */
-    private void updateClips() throws JSONException {
+    private void updateClips() throws JSONException, ParseException {
         String doCheckClips = PhantomBot.instance().getDataStore().GetString("clipsSettings", "", "toggle");
         String discordDoClipsCheck = PhantomBot.instance().getDataStore().GetString("discordSettings", "", "clipsToggle");
         if ((doCheckClips == null || doCheckClips.equals("false")) && (discordDoClipsCheck == null || discordDoClipsCheck.equals("false"))) {
@@ -192,58 +193,58 @@ public class TwitchCache implements Runnable {
 
         JSONObject clipsObj = TwitchAPIv5.instance().getClipsToday(this.channel);
 
-        String createdAt = "";
         String clipURL = "";
         String creator = "";
         String title = "";
         JSONObject thumbnailObj = new JSONObject();
-        int largestTrackingId = 0;
+        Date latestClip = new Date();
+        latestClip.setTime(0L);
 
         if (clipsObj.has("clips")) {
             JSONArray clipsData = clipsObj.getJSONArray("clips");
             if (clipsData.length() > 0) {
                 setDBString("most_viewed_clip_url", "https://clips.twitch.tv/" + clipsData.getJSONObject(0).getString("slug"));
-                String lastTrackingIdStr = getDBString("last_clips_tracking_id");
-                int lastTrackingId = (lastTrackingIdStr == null ? 0 : Integer.parseInt(lastTrackingIdStr));
-                largestTrackingId = lastTrackingId;
+                String lastDateStr = getDBString("last_clips_tracking_date");
+                if (lastDateStr != null && !lastDateStr.isBlank()) {
+                    latestClip = dateFormat.parse(lastDateStr);
+                }
                 for (int i = 0; i < clipsData.length(); i++) {
                     JSONObject clipData = clipsData.getJSONObject(i);
-                    int trackingId = Integer.parseInt(clipData.getString("tracking_id"));
-                    if (trackingId > largestTrackingId) {
-                        largestTrackingId = trackingId;
-                        createdAt = clipData.getString("created_at");
-                        clipURL = "https://clips.twitch.tv/" + clipData.getString("slug");
-                        creator = clipData.getJSONObject("curator").getString("display_name");
-                        thumbnailObj = clipData.getJSONObject("thumbnails");
-                        title = clipData.getString("title");
+                    if (clipData.has("created_at")) {
+                        Date clipDate = dateFormat.parse(clipData.getString("created_at"));
+                        if (clipDate.after(latestClip)) {
+                            latestClip = clipDate;
+                            clipURL = "https://clips.twitch.tv/" + clipData.getString("slug");
+                            creator = clipData.getJSONObject("curator").getString("display_name");
+                            thumbnailObj = clipData.getJSONObject("thumbnails");
+                            title = clipData.getString("title");
+                        }
                     }
                 }
             }
         }
 
         if (clipURL.length() > 0) {
-            setDBString("last_clips_tracking_id", String.valueOf(largestTrackingId));
+            setDBString("last_clips_tracking_date", dateFormat.format(latestClip));
             setDBString("last_clip_url", clipURL);
             EventBus.instance().postAsync(new TwitchClipEvent(clipURL, creator, title, thumbnailObj));
         }
     }
 
     /**
-     * Polls the Twitch API and updates the database cache with information.  This method also
-     * sends events when appropriate.
+     * Polls the Twitch API and updates the database cache with information. This method also sends events when appropriate.
      */
     private void updateCache() throws Exception {
-        Boolean success = true;
-        Boolean isOnline = false;
-        Boolean sentTwitchOnlineEvent = false;
-        String  gameTitle = "";
-        String  streamTitle = "";
-        String  previewLink = "";
-        String  logoLink = "";
-        String[] communities = new String[3];
-        Date    streamCreatedDate = new Date();
-        Date    currentDate = new Date();
-        long    streamUptimeSeconds = 0L;
+        boolean success = true;
+        boolean isOnlinen;
+        boolean sentTwitchOnlineEvent = false;
+        String gameTitlen;
+        String streamTitlen;
+        String previewLinkn;
+        String logoLinkn;
+        Date streamCreatedDate;
+        Date currentDate = new Date();
+        long streamUptimeSecondsn;
 
         com.gmt2001.Console.debug.println("TwitchCache::updateCache");
 
@@ -254,44 +255,48 @@ public class TwitchCache implements Runnable {
             if (streamObj.getBoolean("_success") && streamObj.getInt("_http") == 200) {
 
                 /* Determine if the stream is online or not */
-                isOnline = !streamObj.isNull("stream");
+                isOnlinen = !streamObj.isNull("stream");
 
-                if (!this.isOnline && isOnline) {
+                if (!this.isOnline && isOnlinen) {
                     this.isOnline = true;
-                    EventBus.instance().postAsync(new TwitchOnlineEvent());
+                    if (!this.gotOnlineFromPS) {
+                        EventBus.instance().postAsync(new TwitchOnlineEvent());
+                    }
                     sentTwitchOnlineEvent = true;
-                } else if (this.isOnline && !isOnline) {
+                } else if (this.isOnline && !isOnlinen) {
                     this.isOnline = false;
-                    EventBus.instance().postAsync(new TwitchOfflineEvent());
+                    //EventBus.instance().postAsync(new TwitchOfflineEvent());
                 }
 
-                if (isOnline) {
+                if (isOnlinen) {
                     /* Calculate the stream uptime in seconds. */
-                    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
-                    dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
                     try {
                         streamCreatedDate = dateFormat.parse(streamObj.getJSONObject("stream").getString("created_at"));
-                        streamUptimeSeconds = (long) (Math.floor(currentDate.getTime() - streamCreatedDate.getTime()) / 1000);
-                        this.streamUptimeSeconds = streamUptimeSeconds;
+                        streamUptimeSecondsn = (long) (Math.floor(currentDate.getTime() - streamCreatedDate.getTime()) / 1000);
+                        this.streamUptimeSeconds = streamUptimeSecondsn;
                         this.streamCreatedAt = streamObj.getJSONObject("stream").getString("created_at");
-                    } catch (Exception ex) {
+                    } catch (ParseException | JSONException ex) {
                         success = false;
                         com.gmt2001.Console.err.println("TwitchCache::updateCache: Bad date from Twitch, cannot convert for stream uptime (" + streamObj.getJSONObject("stream").getString("created_at") + ")");
+                        com.gmt2001.Console.err.printStackTrace(ex);
                     }
 
                     /* Determine the preview link. */
-                    previewLink = streamObj.getJSONObject("stream").getJSONObject("preview").getString("template").replace("{width}", "1920").replace("{height}", "1080");
-                    this.previewLink = previewLink;
+                    previewLinkn = streamObj.getJSONObject("stream").getJSONObject("preview").getString("template").replace("{width}", "1920").replace("{height}", "1080");
+                    this.previewLink = previewLinkn;
 
                     /* Get the viewer count. */
-                    viewerCount = streamObj.getJSONObject("stream").getInt("viewers");
-                    this.viewerCount = viewerCount;
+                    if (!this.gotOnlineFromPS) {
+                        this.viewerCount = streamObj.getJSONObject("stream").getInt("viewers");
+                    }
                 } else {
-                    streamUptimeSeconds = 0L;
-                    this.streamUptimeSeconds = streamUptimeSeconds;
+                    streamUptimeSecondsn = 0L;
+                    this.streamUptimeSeconds = streamUptimeSecondsn;
                     this.previewLink = "https://www.twitch.tv/p/assets/uploads/glitch_solo_750x422.png";
                     this.streamCreatedAt = "";
-                    this.viewerCount = 0;
+                    if (!this.gotOnlineFromPS) {
+                        this.viewerCount = 0;
+                    }
                 }
             } else {
                 success = false;
@@ -299,10 +304,11 @@ public class TwitchCache implements Runnable {
                     com.gmt2001.Console.err.println("TwitchCache::updateCache: " + streamObj.getString("message"));
                 } else {
                     com.gmt2001.Console.debug.println("TwitchCache::updateCache: Failed to update.");
+                    com.gmt2001.Console.debug.println(streamObj.toString());
                 }
             }
-        } catch (Exception ex) {
-            com.gmt2001.Console.err.println("TwitchCache::updateCache: " + ex.getMessage());
+        } catch (JSONException ex) {
+            com.gmt2001.Console.err.printStackTrace(ex);
             success = false;
         }
 
@@ -321,18 +327,18 @@ public class TwitchCache implements Runnable {
                 /* Get the game being streamed. */
                 if (streamObj.has("game")) {
                     if (!streamObj.isNull("game")) {
-                        gameTitle = streamObj.getString("game");
-                        if (!forcedGameTitleUpdate && !this.gameTitle.equals(gameTitle)) {
-                            setDBString("game", gameTitle);
+                        gameTitlen = streamObj.getString("game");
+                        if (!forcedGameTitleUpdate && !this.gameTitle.equals(gameTitlen)) {
+                            setDBString("game", gameTitlen);
                             /* Send an event if we did not just send a TwitchOnlineEvent. */
                             if (!sentTwitchOnlineEvent) {
-                                this.gameTitle = gameTitle;
-                                EventBus.instance().postAsync(new TwitchGameChangeEvent(gameTitle));
+                                this.gameTitle = gameTitlen;
+                                EventBus.instance().postAsync(new TwitchGameChangeEvent(gameTitlen));
                             }
-                            this.gameTitle = gameTitle;
+                            this.gameTitle = gameTitlen;
                         }
 
-                        if (forcedGameTitleUpdate && this.gameTitle.equals(gameTitle)) {
+                        if (forcedGameTitleUpdate && this.gameTitle.equals(gameTitlen)) {
                             forcedGameTitleUpdate = false;
                         }
                     }
@@ -342,49 +348,51 @@ public class TwitchCache implements Runnable {
 
                 if (streamObj.has("views")) {
                     /* Get the view count. */
-                    views = streamObj.getInt("views");
-                    this.views = views;
+                    this.views = streamObj.getInt("views");
                 }
 
 
                 /* Get the logo */
                 if (streamObj.has("logo") && !streamObj.isNull("logo")) {
-                    logoLink = streamObj.getString("logo");
-                    this.logoLink = logoLink;
+                    logoLinkn = streamObj.getString("logo");
+                    this.logoLink = logoLinkn;
                     if (new File("./web/panel").isDirectory()) {
-                        ImgDownload.downloadHTTPTo(logoLink, "./web/panel/img/logo.png");
+                        ImgDownload.downloadHTTPTo(logoLinkn, "./web/panel/img/logo.jpeg");
                     }
                 }
 
                 // Get the display name.
-                if (new File("./web/panel").isDirectory() && streamObj.has("display_name") && !streamObj.isNull("display_name")) {
-                    File file = new File("./web/panel/js/utils/panelConfig.js");
-                    if (file.exists()) {
-                        // Read the file.
-                        String fileContent = FileUtils.readFileToString(file, "utf-8");
-                        // Replace the name.
-                        fileContent = fileContent.replace("@DISPLAY_NAME@", streamObj.getString("display_name"));
-                        // Write the new stuff.
-                        FileUtils.writeStringToFile(file, fileContent, "utf-8");
+                if (streamObj.has("display_name") && !streamObj.isNull("display_name")) {
+                    this.displayName = streamObj.getString("display_name");
+                    if (new File("./web/panel").isDirectory()) {
+                        File file = new File("./web/panel/js/utils/panelConfig.js");
+                        if (file.exists()) {
+                            // Read the file.
+                            String fileContent = FileUtils.readFileToString(file, "utf-8");
+                            // Replace the name.
+                            fileContent = fileContent.replace("@DISPLAY_NAME@", streamObj.getString("display_name"));
+                            // Write the new stuff.
+                            FileUtils.writeStringToFile(file, fileContent, "utf-8");
+                        }
                     }
                 }
 
                 /* Get the title. */
                 if (streamObj.has("status")) {
                     if (!streamObj.isNull("status")) {
-                        streamTitle = streamObj.getString("status");
+                        streamTitlen = streamObj.getString("status");
 
-                        if (!forcedStreamTitleUpdate && !this.streamTitle.equals(streamTitle)) {
-                            setDBString("title", streamTitle);
-                            this.streamTitle = streamTitle;
+                        if (!forcedStreamTitleUpdate && !this.streamTitle.equals(streamTitlen)) {
+                            setDBString("title", streamTitlen);
+                            this.streamTitle = streamTitlen;
                             /* Send an event if we did not just send a TwitchOnlineEvent. */
                             if (!sentTwitchOnlineEvent) {
-                                this.streamTitle = streamTitle;
-                                EventBus.instance().postAsync(new TwitchTitleChangeEvent(streamTitle));
+                                this.streamTitle = streamTitlen;
+                                EventBus.instance().postAsync(new TwitchTitleChangeEvent(streamTitlen));
                             }
-                            this.streamTitle = streamTitle;
+                            this.streamTitle = streamTitlen;
                         }
-                        if (forcedStreamTitleUpdate && this.streamTitle.equals(streamTitle)) {
+                        if (forcedStreamTitleUpdate && this.streamTitle.equals(streamTitlen)) {
                             forcedStreamTitleUpdate = false;
                         }
                     }
@@ -399,8 +407,8 @@ public class TwitchCache implements Runnable {
                     com.gmt2001.Console.debug.println("TwitchCache::updateCache: Failed to update.");
                 }
             }
-        } catch (Exception ex) {
-            com.gmt2001.Console.err.println("TwitchCache::updateCache: " + ex.getMessage());
+        } catch (IOException | JSONException ex) {
+            com.gmt2001.Console.err.printStackTrace(ex);
             success = false;
         }
 
@@ -411,20 +419,6 @@ public class TwitchCache implements Runnable {
             com.gmt2001.Console.debug.println(ex);
         }
 
-        /* Update communities */
-        try {
-            JSONObject object = TwitchAPIv5.instance().GetCommunities(this.channel);
-            if (object.has("communities") && object.getJSONArray("communities").length() > 0) {
-                JSONArray array = object.getJSONArray("communities");
-                for (int i = 0; i < array.length(); i++) {
-                    communities[i] = array.getJSONObject(i).getString("name");
-                }
-            }
-            this.communities = communities;
-        } catch (Exception ex) {
-            com.gmt2001.Console.err.println("TwitchCache::updateCache: Failed to get communities: " + ex.getMessage());
-        }
-
         if (PhantomBot.twitchCacheReady.equals("false") && success) {
             com.gmt2001.Console.debug.println("TwitchCache::setTwitchCacheReady(true)");
             PhantomBot.instance().setTwitchCacheReady("true");
@@ -433,23 +427,33 @@ public class TwitchCache implements Runnable {
 
     /**
      * Returns if the channel is online or not.
+     *
+     * @return
      */
-    public Boolean isStreamOnline() {
-        return this.isOnline;
+    public boolean isStreamOnline() {
+        if (!this.gotOnlineFromPS) {
+            return this.isOnline;
+        }
+
+        return this.isOnlinePS;
     }
 
     /**
      * Returns a String representation of true/false to indicate if the stream is online or not.
+     *
+     * @return
      */
     public String isStreamOnlineString() {
-        if (this.isOnline) {
-            return new String("true");
+        if (this.isStreamOnline()) {
+            return "true";
         }
-        return new String("false");
+        return "false";
     }
 
     /**
      * Returns the uptime of the channel in seconds.
+     *
+     * @return
      */
     public long getStreamUptimeSeconds() {
         return this.streamUptimeSeconds;
@@ -457,6 +461,8 @@ public class TwitchCache implements Runnable {
 
     /**
      * Returns the stream created_at date from Twitch.
+     *
+     * @return
      */
     public String getStreamCreatedAt() {
         return this.streamCreatedAt;
@@ -464,38 +470,85 @@ public class TwitchCache implements Runnable {
 
     /**
      * Returns the name of the game being played in the channel.
+     *
+     * @return
      */
     public String getGameTitle() {
         return this.gameTitle;
     }
 
     /**
-     * Sets the game title.  Useful for when !game is used.
+     * Sets the game title.Useful for when !game is used.
+     *
+     * @param gameTitle
      */
     public void setGameTitle(String gameTitle) {
+        this.setGameTitle(gameTitle, true);
+    }
+
+    /**
+     * Sets the game title.Useful for when !game is used.
+     *
+     * @param gameTitle
+     * @param sendEvent
+     */
+    public void setGameTitle(String gameTitle, boolean sendEvent) {
+        boolean changed = !this.gameTitle.equals(gameTitle);
+        setDBString("game", gameTitle);
         forcedGameTitleUpdate = true;
         this.gameTitle = gameTitle;
-        EventBus.instance().postAsync(new TwitchGameChangeEvent(gameTitle));
+        if (changed && sendEvent) {
+            EventBus.instance().postAsync(new TwitchGameChangeEvent(gameTitle));
+        }
     }
 
     /**
      * Returns the title (status) of the stream.
+     *
+     * @return
      */
     public String getStreamStatus() {
         return this.streamTitle;
     }
 
     /**
-     * Sets the title (status) of the stream.  Useful for when !title is used.
+     * Sets the title (status) of the stream.Useful for when !title is used.
+     *
+     * @param streamTitle
      */
     public void setStreamStatus(String streamTitle) {
+        this.setStreamStatus(streamTitle, true);
+    }
+
+    /**
+     * Sets the title (status) of the stream.Useful for when !title is used.
+     *
+     * @param streamTitle
+     * @param sendEvent
+     */
+    public void setStreamStatus(String streamTitle, boolean sendEvent) {
+        boolean changed = !this.streamTitle.equals(streamTitle);
+        setDBString("title", streamTitle);
         forcedStreamTitleUpdate = true;
         this.streamTitle = streamTitle;
-        EventBus.instance().postAsync(new TwitchTitleChangeEvent(streamTitle));
+        if (changed && sendEvent) {
+            EventBus.instance().postAsync(new TwitchTitleChangeEvent(streamTitle));
+        }
+    }
+
+    /**
+     * Returns the display name of the streamer.
+     *
+     * @return
+     */
+    public String getDisplayName() {
+        return this.displayName;
     }
 
     /**
      * Returns the preview link.
+     *
+     * @return
      */
     public String getPreviewLink() {
         return this.previewLink;
@@ -503,6 +556,8 @@ public class TwitchCache implements Runnable {
 
     /**
      * Returns the logo link.
+     *
+     * @return
      */
     public String getLogoLink() {
         return this.logoLink;
@@ -510,6 +565,8 @@ public class TwitchCache implements Runnable {
 
     /**
      * Returns the viewer count.
+     *
+     * @return
      */
     public int getViewerCount() {
         return this.viewerCount;
@@ -517,23 +574,11 @@ public class TwitchCache implements Runnable {
 
     /**
      * Returns the views count.
+     *
+     * @return
      */
     public int getViews() {
         return this.views;
-    }
-
-    /**
-     * Set the communities
-     */
-    public void setCommunities(String[] communities) {
-        this.communities = communities;
-    }
-
-    /**
-     * Returns an array of communities if set.
-     */
-    public String[] getCommunities() {
-        return this.communities;
     }
 
     /**
@@ -547,29 +592,144 @@ public class TwitchCache implements Runnable {
      * Destroys all instances of the TwitchCache object.
      */
     public static void killall() {
-        for (Entry<String, TwitchCache> instance : instances.entrySet()) {
+        instances.entrySet().forEach(instance -> {
             instance.getValue().kill();
-        }
+        });
     }
 
     /**
      * Gets a string from the database. Simply a wrapper around the PhantomBot instance.
      *
-     * @param   String  The database key to search for in the streamInfo table.
-     * @return  String  Returns the found value or null.
+     * @param String The database key to search for in the streamInfo table.
+     * @return String Returns the found value or null.
      */
     private String getDBString(String dbKey) {
         return PhantomBot.instance().getDataStore().GetString("streamInfo", "", dbKey);
     }
 
     /**
-     * Sets a string into the database.  Simply a wrapper around the PhantomBot instance.
+     * Sets a string into the database. Simply a wrapper around the PhantomBot instance.
      *
-     * @param   String  The database key to use for inserting the value into the streamInfo table.
-     * @param   String  The value to insert.
-     * @return  String  Returns the found value or null.
+     * @param String The database key to use for inserting the value into the streamInfo table.
+     * @param String The value to insert.
+     * @return String Returns the found value or null.
      */
     private void setDBString(String dbKey, String dbValue) {
         PhantomBot.instance().getDataStore().SetString("streamInfo", "", dbKey, dbValue);
+    }
+
+    /**
+     * Sets online state
+     */
+    public void goOnlinePS() {
+        this.isOnlinePS = true;
+        this.gotOnlineFromPS = true;
+        this.streamUptimeSeconds = 0L;
+    }
+
+    /**
+     * Sets online state
+     */
+    public void goOnline() {
+        this.isOnline = true;
+        this.streamUptimeSeconds = 0L;
+    }
+
+    /**
+     * Sets offline state
+     */
+    public void goOfflinePS() {
+        this.isOnlinePS = false;
+        this.gotOnlineFromPS = true;
+        this.viewerCount = 0;
+    }
+
+    /**
+     * Sets offline state
+     */
+    public void goOffline() {
+        this.isOnline = false;
+        this.viewerCount = 0;
+    }
+
+    /**
+     * Updates the stream status
+     */
+    public void syncStreamStatus() {
+        this.syncStreamStatus(false);
+    }
+
+    /**
+     * Updates the stream status
+     *
+     * @param isFromPubSubEvent
+     */
+    public void syncStreamStatus(boolean isFromPubSubEvent) {
+        String userid = UsernameCache.instance().getID(this.channel);
+        List<String> userids = List.of(userid);
+        Helix.instance().getStreamsAsync(20, null, null, userids, null, null, null).doOnSuccess(streams -> {
+            if (streams != null && streams.has("data")) {
+                if (streams.getJSONArray("data").length() > 0) {
+                    JSONObject stream = streams.getJSONArray("data").getJSONObject(0);
+                    boolean sendingOnline = false;
+
+                    if (!isFromPubSubEvent) {
+                        if (!this.gotOnlineFromPS && !this.isOnline) {
+                            this.goOnline();
+                            sendingOnline = true;
+                        } else if (this.gotOnlineFromPS && !this.isOnlinePS) {
+                            this.goOnlinePS();
+                            sendingOnline = true;
+                        }
+
+                        if (sendingOnline) {
+                            EventBus.instance().postAsync(new TwitchOnlineEvent());
+                        }
+                    }
+
+                    this.setStreamStatus(stream.optString("title", ""), !isFromPubSubEvent && !sendingOnline);
+                    this.setGameTitle(stream.optString("game_name", ""), !isFromPubSubEvent && !sendingOnline);
+                    this.updateViewerCount(stream.optInt("viewer_count", 0));
+                    this.streamCreatedAt = stream.optString("started_at", "");
+                    this.previewLink = stream.optString("thumbnail_url", "").replace("{width}", "1920").replace("{height}", "1080");
+                } else {
+                    if (!isFromPubSubEvent) {
+                        if (!this.gotOnlineFromPS && this.isOnline) {
+                            this.goOffline();
+                            EventBus.instance().postAsync(new TwitchOfflineEvent());
+                        }
+                    }
+                }
+            }
+        }).subscribe();
+    }
+
+    /**
+     * Updates the viewer count
+     *
+     * @param viewers
+     */
+    public void updateViewerCount(int viewers) {
+        this.viewerCount = viewers;
+    }
+
+    /**
+     * Updates the current game
+     */
+    public void updateGame() {
+        this.updateGame(false);
+    }
+
+    /**
+     * Updates the current game
+     *
+     * @param sendEvent
+     */
+    public void updateGame(boolean sendEvent) {
+        JSONObject channelInfo = Helix.instance().getChannelInformationAsync(UsernameCache.instance().getID(this.channel)).block();
+
+        if (channelInfo != null && channelInfo.has("data") && channelInfo.getJSONArray("data").length() > 0) {
+            this.setGameTitle(channelInfo.getJSONArray("data").getJSONObject(0).optString("game_name"), sendEvent);
+        }
     }
 }

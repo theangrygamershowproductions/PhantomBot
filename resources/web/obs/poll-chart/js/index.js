@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@
 
 // Main stuff.
 $(function() {
-    var webSocket = new ReconnectingWebSocket((getProtocol() === 'https://' || window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + '/ws/panel', null, { reconnectInterval: 500 }),
+    var webSocket = new ReconnectingWebSocket((window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + '/ws/alertspolls', null, { reconnectInterval: 500 }),
         localConfigs = getQueryMap(),
         chart;
 
@@ -26,12 +26,12 @@ $(function() {
      */
     function getQueryMap() {
         let queryString = window.location.search, // Query string that starts with ?
-            queryParts = queryString.substr(1).split('&'), // Split at each &, which is a new query.
+            queryParts = queryString.slice(1).split('&'), // Split at each &, which is a new query.
             queryMap = new Map(); // Create a new map for save our keys and values.
 
         for (let i = 0; i < queryParts.length; i++) {
-            let key = queryParts[i].substr(0, queryParts[i].indexOf('=')),
-                value = queryParts[i].substr(queryParts[i].indexOf('=') + 1, queryParts[i].length);
+            let key = queryParts[i].substring(0, queryParts[i].indexOf('=')),
+                value = queryParts[i].slice(queryParts[i].indexOf('=') + 1);
 
             if (key.length > 0 && value.length > 0) {
                 queryMap.set(key.toLowerCase(), value);
@@ -61,6 +61,17 @@ $(function() {
         } catch (e) {
             logError('Failed to send message to socket: ' + e.message);
         }
+    };
+
+    const wsEvent = function(callback_id, script, argsString, args) {
+        sendToSocket({
+            socket_event: callback_id,
+            script: script,
+            args: {
+                arguments: String(argsString),
+                args: args
+            }
+        });
     };
 
     /*
@@ -282,6 +293,7 @@ $(function() {
                 if (message.hasOwnProperty('authresult')) {
                     if (message.authresult === 'true') {
                         logSuccess('Successfully authenticated with the socket.');
+                        wsEvent('pollState', './systems/pollSystem.js', null, null);
                     } else {
                         logError('Failed to authenticate with the socket.');
                     }

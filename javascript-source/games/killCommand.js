@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -69,7 +69,7 @@
             $.say(lang);
             if (!$.isMod(sender) && jailTimeout > 0) {
                 setTimeout(function() {
-                    $.session.say('.timeout ' + sender + ' ' + jailTimeout);
+                    Packages.tv.phantombot.PhantomBot.instance().getSession().say('.timeout ' + sender + ' ' + jailTimeout);
                 }, 1500);
             }
         } else {

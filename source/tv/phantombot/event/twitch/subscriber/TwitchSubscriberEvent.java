@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,47 +22,26 @@ public class TwitchSubscriberEvent extends TwitchEvent {
     private final String subscriber;
     private final String plan;
     private final String months;
+    private final String message;
 
     /**
      * Class constructor.
      *
-     * @param {String} subscriber
+     * @param subscriber
+     * @param plan
+     * @param message
      */
-    public TwitchSubscriberEvent(String subscriber) {
-        this.subscriber = subscriber;
-        this.plan = null;
-        this.months = null;
-    }
-
-    /**
-     * Class constructor.
-     *
-     * @param {String} subscriber
-     * @param {String} plan
-     */
-    public TwitchSubscriberEvent(String subscriber, String plan) {
-        this.subscriber = subscriber;
-        this.plan = plan;
-        this.months = null;
-    }
-
-    /**
-     * Class constructor.
-     *
-     * @param {String} subscriber
-     * @param {String} plan
-     * @param {String} months
-     */
-    public TwitchSubscriberEvent(String subscriber, String plan, String months) {
+    public TwitchSubscriberEvent(String subscriber, String plan, String months, String message) {
         this.subscriber = subscriber;
         this.plan = plan;
         this.months = months;
+        this.message = message;
     }
 
     /**
      * Method that returns the subscriber's name.
      *
-     * @return {String} subscriber
+     * @return subscriber
      */
     public String getSubscriber() {
         return this.subscriber;
@@ -71,7 +50,7 @@ public class TwitchSubscriberEvent extends TwitchEvent {
     /**
      * Method that returns the subcription plan. (1000, 2000, 3000 and Prime)
      *
-     * @return {String} plan
+     * @return plan
      */
     public String getPlan() {
         return this.plan;
@@ -80,9 +59,13 @@ public class TwitchSubscriberEvent extends TwitchEvent {
     /**
      * Method that returns the cumulative months.
      *
-     * @return {String} months
+     * @return months
      */
     public String getMonths() {
         return this.months;
+    }
+    
+    public String getMessage() {
+        return this.message;
     }
 }

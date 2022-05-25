@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,7 +25,7 @@ public abstract class TwitchHostEvent extends TwitchEvent {
     /**
      * Abstract constructor.
      *
-     * @param {String} hoster
+     * @param hoster
      */
     protected TwitchHostEvent(String hoster) {
         this.hoster = hoster;
@@ -35,8 +35,8 @@ public abstract class TwitchHostEvent extends TwitchEvent {
     /**
      * Abstract constructor.
      *
-     * @param {String} hoster
-     * @param {int}    users
+     * @param hoster
+     * @param    users
      */
     protected TwitchHostEvent(String hoster, int users) {
         this.hoster = hoster;
@@ -46,7 +46,7 @@ public abstract class TwitchHostEvent extends TwitchEvent {
     /**
      * Method that gets the hosters name.
      *
-     * @return {String} hoster
+     * @return hoster
      */
     public String getHoster() {
         return this.hoster;
@@ -55,7 +55,7 @@ public abstract class TwitchHostEvent extends TwitchEvent {
     /**
      * Method that gets the amount of users the user hosted for.
      *
-     * @return {int} users
+     * @return users
      */
     public int getUsers() {
         return this.users;

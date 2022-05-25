@@ -1,7 +1,7 @@
 /* astyle --style=java --indent=spaces=4 --mode=java */
 
-/*
- * Copyright (C) 2016-2019 phantombot.tv
+ /*
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,30 +16,26 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package tv.phantombot.cache;
 
-import com.gmt2001.TwitchAPIv5;
+import com.gmt2001.BTTVAPIv3;
 import com.illusionaryone.FrankerZAPIv1;
-import com.illusionaryone.BTTVAPIv2;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
-import tv.phantombot.PhantomBot;
+import org.json.JSONException;
+import org.json.JSONObject;
 import tv.phantombot.PhantomBot;
 import tv.phantombot.event.EventBus;
 import tv.phantombot.event.emotes.EmotesGetEvent;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 public class EmotesCache implements Runnable {
 
-    private static final int LOOP_SLEEP_EMOTES_DISABLED = 60;
-    private static final int LOOP_SLEEP_EMOTES_ENABLED = 60 * 60;
+    private static final long LOOP_SLEEP_EMOTES_DISABLED = 60L;
+    private static final long LOOP_SLEEP_EMOTES_ENABLED = 60L * 60L;
     private static final Map<String, EmotesCache> instances = new ConcurrentHashMap<>();
+
     public static EmotesCache instance(String channel) {
         EmotesCache instance = instances.get(channel);
         if (instance == null) {
@@ -55,9 +51,8 @@ public class EmotesCache implements Runnable {
     private Date timeoutExpire = new Date();
     private Date lastFail = new Date();
     private int numfail = 0;
-    private int id = 0;
     private boolean killed = false;
-    private int loopSleep = 0;
+    private long loopSleep = 0;
 
     @SuppressWarnings("CallToThreadStartDuringObjectConstruction")
     private EmotesCache(String channel) {
@@ -89,24 +84,20 @@ public class EmotesCache implements Runnable {
     @Override
     @SuppressWarnings("SleepWhileInLoop")
     public void run() {
-        loopSleep = 600;
+        loopSleep = 600L;
 
         while (!killed) {
             try {
-                try {
-                    if (new Date().after(timeoutExpire)) {
-                        this.updateCache();
-                    }
-                } catch (Exception ex) {
-                    checkLastFail();
-                    com.gmt2001.Console.debug.println("EmotesCache.run: Failed to update emotes: " + ex.getMessage());
+                if (new Date().after(timeoutExpire)) {
+                    this.updateCache();
                 }
             } catch (Exception ex) {
-                com.gmt2001.Console.err.logStackTrace(ex);
+                checkLastFail();
+                com.gmt2001.Console.err.printStackTrace(ex);
             }
 
             try {
-                Thread.sleep(loopSleep * 1000);
+                Thread.sleep(loopSleep * 1000L);
             } catch (InterruptedException ex) {
                 com.gmt2001.Console.debug.println("EmotesCache.run: Failed to execute initial sleep: [InterruptedException] " + ex.getMessage());
             }
@@ -120,37 +111,17 @@ public class EmotesCache implements Runnable {
                 return true;
             } else if (jsonResult.getInt("_http") == 404 && ignore404) {
                 return true;
-            } else if (jsonResult.getInt("_http") != 404 || (jsonResult.getInt("_http") == 404 && !ignore404)) {
-                try {
-                    throw new Exception("[HTTPErrorExecption] HTTP " + " " + jsonResult.getInt("_http") + ". req=" +
-                                        jsonResult.getString("_type") + " " + jsonResult.getString("_url") + "   " +
-                                        (jsonResult.has("message") && !jsonResult.isNull("message") ? "message=" +
-                                         jsonResult.getString("message") : "content=" + jsonResult.getString("_content")) +
-                                        "Emotes Type=" + emoteType);
-                } catch (Exception ex) {
-                    com.gmt2001.Console.debug.println("EmotesCache.updateCache: Failed to update emotes (" + emoteType + "): " + ex.getMessage());
-                }
-            }
-        } else {
-            try {
-                throw new Exception("[" + jsonResult.getString("_exception") + "] " + jsonResult.getString("_exceptionMessage") + "Emotes Type=" + emoteType);
-            } catch (Exception ex) {
-                if (ex.getMessage().startsWith("[SocketTimeoutException]") || ex.getMessage().startsWith("[IOException]")) {
-                    checkLastFail();
-                    com.gmt2001.Console.debug.println("EmotesCache.updateCache: Failed to update emotes (" + emoteType + "): " + ex.getMessage());
-                }
             }
         }
         return false;
     }
 
     private void updateCache() throws Exception {
-        JSONObject twitchJsonResult = null;
-        JSONObject bttvJsonResult = null;
-        JSONObject bttvLocalJsonResult = null;
-        JSONObject ffzJsonResult = null;
-        JSONObject ffzLocalJsonResult = null;
-        String emotesModEnabled = "";
+        JSONObject bttvJsonResult;
+        JSONObject bttvLocalJsonResult;
+        JSONObject ffzJsonResult;
+        JSONObject ffzLocalJsonResult;
+        String emotesModEnabled;
 
         emotesModEnabled = PhantomBot.instance().getDataStore().GetString("chatModerator", "", "emotesToggle");
 
@@ -168,22 +139,13 @@ public class EmotesCache implements Runnable {
 
         com.gmt2001.Console.debug.println("Polling Emotes from BTTV and FFZ");
 
-        /**
-         * @info Don't need this anymore since we use the IRCv3 tags for Twitch emotes.
-         * twitchJsonResult = TwitchAPIv5.instance().GetEmotes();
-         * if (!checkJSONExceptions(twitchJsonResult, false, "Twitch")) {
-         *    com.gmt2001.Console.err.println("Failed to get Twitch Emotes");
-         *    return;
-         * }
-         */
-
-        bttvJsonResult = BTTVAPIv2.instance().GetGlobalEmotes();
+        bttvJsonResult = BTTVAPIv3.instance().GetGlobalEmotes();
         if (!checkJSONExceptions(bttvJsonResult, true, "Global BTTV")) {
             com.gmt2001.Console.err.println("Failed to get BTTV Emotes");
             return;
         }
 
-        bttvLocalJsonResult = BTTVAPIv2.instance().GetLocalEmotes(this.channel);
+        bttvLocalJsonResult = BTTVAPIv3.instance().GetLocalEmotes(UsernameCache.instance().getID(this.channel));
         if (!checkJSONExceptions(bttvLocalJsonResult, true, "Local BTTV")) {
             com.gmt2001.Console.err.println("Failed to get BTTV Local Emotes");
             return;
@@ -202,15 +164,7 @@ public class EmotesCache implements Runnable {
         }
 
         com.gmt2001.Console.debug.println("Pushing Emote JSON Objects to EventBus");
-        EventBus.instance().post(new EmotesGetEvent(twitchJsonResult, bttvJsonResult, bttvLocalJsonResult, ffzJsonResult, ffzLocalJsonResult));
-        System.gc();
-
-        /* Set these to null to save memory */
-        twitchJsonResult = null;
-        bttvJsonResult = null;
-        bttvLocalJsonResult = null;
-        ffzJsonResult = null;
-        ffzLocalJsonResult = null;
+        EventBus.instance().postAsync(new EmotesGetEvent(null, bttvJsonResult, bttvLocalJsonResult, ffzJsonResult, ffzLocalJsonResult));
     }
 
     public void kill() {
@@ -218,8 +172,8 @@ public class EmotesCache implements Runnable {
     }
 
     public static void killall() {
-        for (Entry<String, EmotesCache> instance : instances.entrySet()) {
+        instances.entrySet().forEach((instance) -> {
             instance.getValue().kill();
-        }
+        });
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,48 +16,48 @@
  */
 package tv.phantombot.script;
 
-import tv.phantombot.PhantomBot;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Map;
+import tv.phantombot.PhantomBot;
 
 public class ScriptManager {
-    private static final HashMap<String, Script> scripts = new HashMap<String, Script>();
+
+    private static final Map<String, Script> scripts = new HashMap<>();
 
     /**
-     * @function loadScript
-     * @info Used to load scripts
-     *
-     * @param {File} scriptFile
+     * @param scriptFile
+     * @param fileName
+     * @throws java.io.IOException
      */
-    public static void loadScript(File scriptFile) throws IOException {
+    public static void loadScript(File scriptFile, String fileName) throws IOException {
         if (scripts.containsKey(scriptFile.toPath().toString()) && !scripts.get(scriptFile.toPath().toString()).isKilled()) {
             return;
         }
 
-        Script script = new Script(scriptFile);
+        Script script = new Script(scriptFile, fileName);
         scripts.put(scriptFile.toPath().toString(), script);
         try {
             script.load();
-        } catch (Exception ex) {
+        } catch (IOException ex) {
             if (scriptFile.getPath().endsWith("init.js")) {
                 com.gmt2001.Console.err.println("Failed to load module: init.js: " + ex.getMessage());
             } else {
                 com.gmt2001.Console.err.println("Failed to load module: " + scriptFile.getPath().replace("./scripts/./", "") + ": " + ex.getMessage());
             }
+            com.gmt2001.Console.err.printStackTrace(ex);
             if (!PhantomBot.getReloadScripts()) {
                 com.gmt2001.Console.err.println("Terminating PhantomBot due to Bad JavaScript File");
                 PhantomBot.exitError();
             }
-            throw new IOException(ex.getMessage());
+            throw ex;
         }
     }
 
     /**
-     * @function reloadScript
-     * @info Used to force reload scripts.
-     *
-     * @param {File} scriptFile
+     * @param scriptFile
+     * @throws java.io.IOException
      */
     public static void reloadScript(File scriptFile) throws IOException {
         if (!scripts.containsKey(scriptFile.toPath().toString()) || scripts.get(scriptFile.toPath().toString()).isKilled()) {
@@ -82,11 +82,9 @@ public class ScriptManager {
     }
 
     /**
-     * @function reloadScriptR
-     * @info Used to reload a script.
-     *
-     * @param {File} scriptFile
-     * @return {Script} file
+     * @param scriptFile
+     * @return
+     * @throws java.io.IOException
      */
     public static Script reloadScriptR(File scriptFile) throws IOException {
         reloadScript(scriptFile);
@@ -94,23 +92,20 @@ public class ScriptManager {
     }
 
     /**
-     * @function loadScriptR
-     * @info Used to load scripts
-     *
-     * @param {File} scriptFile
-     * @return {Script} file
+     * @param scriptFile
+     * @param fileName
+     * @return
+     * @throws java.io.IOException
      */
-    public static Script loadScriptR(File scriptFile) throws IOException {
-        loadScript(scriptFile);
+    public static Script loadScriptR(File scriptFile, String fileName) throws IOException {
+        loadScript(scriptFile, fileName);
         return getScript(scriptFile);
     }
 
     /**
-     * @function getScript
-     * @info Used to get scripts
-     *
-     * @param {File} scriptFile
-     * @return {Script} file
+     * @param scriptFile
+     * @return file
+     * @throws java.io.IOException
      */
     public static Script getScript(File scriptFile) throws IOException {
         if (!scripts.containsKey(scriptFile.toPath().toString())) {
@@ -126,12 +121,9 @@ public class ScriptManager {
     }
 
     /**
-     * @function getScripts
-     * @info Used to all the scripts
-     *
-     * @return {Script} file
+     * @return file
      */
-    public static HashMap<String, Script> getScripts() {
+    public static Map<String, Script> getScripts() {
         return scripts;
     }
 }

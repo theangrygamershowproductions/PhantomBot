@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,11 +16,11 @@
  */
 package tv.phantombot.event.discord;
 
-import discord4j.core.object.entity.Channel;
 import discord4j.core.object.entity.Message;
-import discord4j.core.object.entity.TextChannel;
 import discord4j.core.object.entity.User;
-import discord4j.core.object.entity.VoiceChannel;
+import discord4j.core.object.entity.channel.Channel;
+import discord4j.core.object.entity.channel.VoiceChannel;
+import tv.phantombot.discord.util.DiscordUtil;
 import tv.phantombot.event.Event;
 
 public abstract class DiscordEvent extends Event {
@@ -47,17 +47,17 @@ public abstract class DiscordEvent extends Event {
     /**
      * Class constructor for this event.
      *
-     * @param {User} user
+     * @param user
      */
     protected DiscordEvent(User user) {
-        this(user, null);
+        this(user, null, null);
     }
 
     /**
      * Class constructor for this event.
      *
-     * @param {User} user
-     * @param {Channel} channel
+     * @param user
+     * @param channel
      */
     protected DiscordEvent(User user, Channel channel) {
         this(user, channel, null);
@@ -66,9 +66,9 @@ public abstract class DiscordEvent extends Event {
     /**
      * Class constructor for this event.
      *
-     * @param {User} user
-     * @param {Channel} channel
-     * @param {Message} message
+     * @param user
+     * @param channel
+     * @param message
      */
     protected DiscordEvent(User user, Channel channel, Message message) {
         this.user = user;
@@ -77,13 +77,8 @@ public abstract class DiscordEvent extends Event {
         this.message = message;
 
         if (channel != null) {
-            if (channel.getType() != Channel.Type.DM) {
-                this.channelName = ((TextChannel) channel).getName();
-            } else {
-                this.channelName = channel.getMention();
-            }
-
-            this.channelId = channel.getId().asString();
+            this.channelName = DiscordUtil.channelName(channel);
+            this.channelId = DiscordUtil.channelIdAsString(channel);
         } else {
             this.channelName = null;
             this.channelId = null;
@@ -107,16 +102,16 @@ public abstract class DiscordEvent extends Event {
     /**
      * Class constructor for this event.
      *
-     * @param {User} user
-     * @param {VoiceChannel} channel
+     * @param user
+     * @param channel
      */
     protected DiscordEvent(User user, VoiceChannel voicechannel) {
         this.user = user;
         this.channel = null;
         this.voicechannel = voicechannel;
         this.message = null;
-        this.channelName = voicechannel.getName();
-        this.channelId = voicechannel.getId().asString();
+        this.channelName = DiscordUtil.channelName(channel);
+        this.channelId = DiscordUtil.channelIdAsString(channel);
         
         if (user != null) {
             this.username = user.getUsername();
@@ -136,7 +131,7 @@ public abstract class DiscordEvent extends Event {
     /**
      * Method that returns the sender of the event with their discrim.
      *
-     * @return {String}
+     * @return
      */
     public String getSender() {
         return this.sender.toLowerCase();
@@ -145,7 +140,7 @@ public abstract class DiscordEvent extends Event {
     /**
      * Method that returns just the username of the event.
      *
-     * @return {String}
+     * @return
      */
     public String getUsername() {
         return this.username;
@@ -154,7 +149,7 @@ public abstract class DiscordEvent extends Event {
     /**
      * Method that returns the mention string for this user.
      *
-     * @return {String}
+     * @return
      */
     public String getMention() {
         return this.mention;
@@ -163,7 +158,7 @@ public abstract class DiscordEvent extends Event {
     /**
      * Method that returns the channel name.
      *
-     * @return {String}
+     * @return
      */
     public String getChannel() {
         return this.channelName;
@@ -172,16 +167,16 @@ public abstract class DiscordEvent extends Event {
     /**
      * Method that gets the raw message.
      *
-     * @return {String}
+     * @return
      */
     public String getMessage() {
-        return this.message.getContent().get();
+        return this.message.getContent();
     }
 
     /**
      * Method that returns the channel ID.
      *
-     * @return {String}
+     * @return
      */
     public String getChannelId() {
         return this.channelId;
@@ -190,7 +185,7 @@ public abstract class DiscordEvent extends Event {
     /**
      * Method that returns the user's discriminator.
      *
-     * @return {String}
+     * @return
      */
     public String getDiscriminator() {
         return this.discrim;
@@ -199,7 +194,7 @@ public abstract class DiscordEvent extends Event {
     /**
      * Method that returns the user's ID.
      *
-     * @return {String}
+     * @return
      */
     public String getSenderId() {
         return this.senderId;
@@ -208,7 +203,7 @@ public abstract class DiscordEvent extends Event {
     /**
      * Method that returns the user's object for Discord4J.
      *
-     * @return {User}
+     * @return
      */
     public User getDiscordUser() {
         return this.user;
@@ -217,7 +212,7 @@ public abstract class DiscordEvent extends Event {
     /**
      * Method that returns the channel's object for Discord4J.
      *
-     * @return {Channel}
+     * @return
      */
     public Channel getDiscordChannel() {
         return this.channel;
@@ -226,7 +221,7 @@ public abstract class DiscordEvent extends Event {
     /**
      * Method that returns the channel's object for Discord4J.
      *
-     * @return {Channel}
+     * @return
      */
     public Channel getDiscordVoiceChannel() {
         return this.voicechannel;
@@ -235,7 +230,7 @@ public abstract class DiscordEvent extends Event {
     /**
      * Method that returns the message object
      *
-     * @return {Message}
+     * @return
      */
     public Message getDiscordMessage() {
         return this.message;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,20 +17,31 @@
 package com.gmt2001;
 
 import com.gmt2001.HttpRequest.RequestType;
-import java.util.HashMap;
+import java.util.Map;
 
 /**
  *
  * @author gmt2001
  */
+@Deprecated
 public class HttpResponse {
 
     public RequestType type;
     public String url;
     public String post;
     public String content;
-    public HashMap<String, String> headers;
+    public Map<String, String> headers;
     public int httpCode;
     public boolean success;
     public String exception;
+    public Exception rawException;
+
+    @Override
+    public String toString() {
+        if (exception != null && !exception.isEmpty()) {
+            return type.name() + " " + url + " {" + post + "} -> EXCEPTION " + exception;
+        }
+
+        return type.name() + " " + url + " {" + post + "} -> " + httpCode + " " + content;
+    }
 }

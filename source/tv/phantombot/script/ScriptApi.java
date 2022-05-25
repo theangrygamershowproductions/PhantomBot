@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 phantombot.tv
+ * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,12 +18,9 @@ package tv.phantombot.script;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.List;
 
-public class ScriptApi {
+public final class ScriptApi {
 
     private static final ScriptApi instance = new ScriptApi();
 
@@ -45,16 +42,24 @@ public class ScriptApi {
         ScriptEventManager.instance().register(eventName, handler);
     }
 
+    public List<String> getEventNames() {
+        return ScriptEventManager.instance().getEventNames();
+    }
+
+    public String formatEventName(String eventName) {
+        return ScriptEventManager.instance().formatEventName(eventName);
+    }
+
     public boolean exists(String eventName) {
         return ScriptEventManager.instance().hasEvent(eventName);
     }
 
     public void loadScript(Script script, String fileName) throws IOException {
-        ScriptManager.loadScript(new File(new File("./scripts/"), fileName));
+        ScriptManager.loadScript(new File(new File("./scripts/"), fileName), fileName);
     }
 
     public Script loadScriptR(Script script, String fileName) throws IOException {
-        return ScriptManager.loadScriptR(new File(new File("./scripts/"), fileName));
+        return ScriptManager.loadScriptR(new File(new File("./scripts/"), fileName), fileName);
     }
 
     public Script reloadScriptR(Script script, String fileName) throws IOException {
