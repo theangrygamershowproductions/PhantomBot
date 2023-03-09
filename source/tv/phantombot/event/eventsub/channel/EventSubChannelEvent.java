@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
+ * Copyright (C) 2016-2023 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,8 +19,12 @@ package tv.phantombot.event.eventsub.channel;
 import tv.phantombot.event.eventsub.EventSubEvent;
 
 /**
+ * An EventSub event related to a channel
  *
  * @author gmt2001
  */
-public abstract class EventSubChannelEvent extends EventSubEvent {
+public abstract class EventSubChannelEvent<T> extends EventSubEvent<T> {
+    public EventSubChannelEvent(T event) {
+        super(event);
+    }
 }

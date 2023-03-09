@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
+ * Copyright (C) 2016-2023 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@ package com.scaniatv;
 import com.gmt2001.HttpRequest;
 import com.gmt2001.httpclient.HttpClient;
 import com.gmt2001.httpclient.HttpClientResponse;
-import com.gmt2001.httpclient.HttpUrl;
+import com.gmt2001.httpclient.URIUtil;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
@@ -63,7 +63,7 @@ public class StreamElementsAPIv2 {
         JSONObject jsonResult = new JSONObject("{}");
         HttpHeaders headers = HttpClient.createHeaders(HttpMethod.GET, true);
         headers.add(HttpHeaderNames.AUTHORIZATION, "Bearer " + jwtToken);
-        HttpClientResponse response = HttpClient.get(HttpUrl.fromUri(URL, endpoint), headers);
+        HttpClientResponse response = HttpClient.get(URIUtil.create(URL + endpoint), headers);
 
         if (response.hasJson()) {
             jsonResult = response.json();
@@ -82,7 +82,7 @@ public class StreamElementsAPIv2 {
      * @param  jwtToken  jwt key that the user added in the bot login.
      */
     public void SetJWT(String token) {
-        jwtToken = token;
+        jwtToken = token.trim();
     }
 
     /*
@@ -91,7 +91,7 @@ public class StreamElementsAPIv2 {
      * @param  id
      */
     public void SetID(String id) {
-        this.id = id;
+        this.id = id.trim();
     }
 
     /*

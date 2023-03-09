@@ -1,5 +1,6 @@
+<!DOCTYPE html>
 <!--
-    Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
+    Copyright (C) 2016-2023 phantombot.github.io/PhantomBot
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
@@ -11,8 +12,6 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 -->
-
-<!DOCTYPE html>
 
 <html style="height: auto; min-height: 100%;">
     <head>
@@ -132,6 +131,21 @@
                             </div>
                             <!-- /.box -->
                         </div>
+                        <div class="col-md-4">
+                            <div class="box box-solid box-primary" id="javadoc-tab">
+                                <div class="box-header with-border">
+                                    <i class="fab fa-java"></i>
+                                    <h3 class="box-title">JavaDoc</h3>
+                                    <!-- /.box-tools -->
+                                </div>
+                                <!-- /.box-header -->
+                                <div class="box-body">
+                                    Documentation of Public/Protected Classes/Methods/Fields in the PhantomBot core
+                                </div>
+                                <!-- /.box-body -->
+                            </div>
+                            <!-- /.box -->
+                        </div>
                 </div>
             </div>
             <footer class="main-footer">
@@ -163,26 +177,31 @@
                     window.location = 'https://github.com/phantombot/PhantomBot';
                 });
                 $('#github-tab').css('cursor', 'pointer');
-				
+
 				$('#download-tab').click(function() {
                     window.location = 'https://github.com/PhantomBot/PhantomBot/releases/latest';
                 });
                 $('#download-tab').css('cursor', 'pointer');
-				
+
 				$('#discord-tab').click(function() {
                     window.location = 'https://discord.gg/YKvMd78';
                 });
                 $('#discord-tab').css('cursor', 'pointer');
-				
-				$('#panel-tab').click(function() {
+
+		        $('#panel-tab').click(function() {
                     window.location = getWindowUrl('panel/login');
                 });
                 $('#panel-tab').css('cursor', 'pointer');
-                
+
                 $('#guides-tab').click(function() {
                     window.location = getWindowUrl('guides');
                 });
                 $('#guides-tab').css('cursor', 'pointer');
+
+                $('#javadoc-tab').click(function() {
+                    window.location = getWindowUrl('javadoc-stable');
+                });
+                $('#javadoc-tab').css('cursor', 'pointer');
 
                 // Start tooltips.
                 $('[data-toggle="tooltip"]').tooltip();

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
+ * Copyright (C) 2016-2023 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,11 +16,7 @@
  */
 package tv.phantombot.event.twitch.subscriber;
 
-import tv.phantombot.event.twitch.TwitchEvent;
-
-public class TwitchPrimeSubscriberEvent extends TwitchEvent {
-    private final String subscriber;
-    private final String months;
+public class TwitchPrimeSubscriberEvent extends TwitchSubscriberEvent {
 
     /**
      * Class constructor.
@@ -28,35 +24,16 @@ public class TwitchPrimeSubscriberEvent extends TwitchEvent {
      * @param subscriber
      */
     public TwitchPrimeSubscriberEvent(String subscriber) {
-        this.subscriber = subscriber;
-        this.months = null;
-    }
-    
-        /**
-     * Class constructor.
-     *
-     * @param subscriber
-     */
-    public TwitchPrimeSubscriberEvent(String subscriber, String months) {
-        this.subscriber = subscriber;
-        this.months = months;
+        super(subscriber, "Prime", null, "");
     }
 
     /**
-     * Method that returns the user who subscribed.
+     * Class constructor.
      *
-     * @return subscriber
+     * @param subscriber
+     * @param months
      */
-    public String getSubscriber() {
-        return this.subscriber;
-    }
-    
-    /**
-     * Method that returns the cumulative months.
-     *
-     * @return months
-     */
-    public String getMonths() {
-        return this.months;
+    public TwitchPrimeSubscriberEvent(String subscriber, String months) {
+        super(subscriber, "Prime", months, "");
     }
 }

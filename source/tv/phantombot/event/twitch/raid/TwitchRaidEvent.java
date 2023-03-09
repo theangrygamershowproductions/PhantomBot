@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
+ * Copyright (C) 2016-2023 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@ package tv.phantombot.event.twitch.raid;
 import tv.phantombot.event.twitch.TwitchEvent;
 
 public class TwitchRaidEvent extends TwitchEvent {
+
     private final String username;
     private final String viewers;
 
@@ -34,7 +35,7 @@ public class TwitchRaidEvent extends TwitchEvent {
     }
 
     /**
-     * Method that returns the username who hosted.
+     * Method that returns the username who raided.
      *
      * @return username
      */

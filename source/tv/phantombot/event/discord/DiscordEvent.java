@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
+ * Copyright (C) 2016-2023 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -112,7 +112,7 @@ public abstract class DiscordEvent extends Event {
         this.message = null;
         this.channelName = DiscordUtil.channelName(channel);
         this.channelId = DiscordUtil.channelIdAsString(channel);
-        
+
         if (user != null) {
             this.username = user.getUsername();
             this.discrim = user.getDiscriminator();

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
+ * Copyright (C) 2016-2023 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,8 +19,25 @@ package tv.phantombot.event.eventsub;
 import tv.phantombot.event.Event;
 
 /**
+ * An EventSub event
+ *
+ * @param <T> The type of the event object
  *
  * @author gmt2001
  */
-public abstract class EventSubEvent extends Event {
+public abstract class EventSubEvent<T> extends Event {
+    private final T event;
+
+    public EventSubEvent(T event) {
+        super();
+        this.event = event;
+    }
+
+    /**
+     * Returns the {@link T} that contains data about the event
+     * @return
+     */
+    public T event() {
+        return this.event;
+    }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
+ * Copyright (C) 2016-2023 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -61,17 +61,6 @@ $(function() {
         } catch (e) {
             logError('Failed to send message to socket: ' + e.message);
         }
-    };
-
-    const wsEvent = function(callback_id, script, argsString, args) {
-        sendToSocket({
-            socket_event: callback_id,
-            script: script,
-            args: {
-                arguments: String(argsString),
-                args: args
-            }
-        });
     };
 
     /*
@@ -293,7 +282,7 @@ $(function() {
                 if (message.hasOwnProperty('authresult')) {
                     if (message.authresult === 'true') {
                         logSuccess('Successfully authenticated with the socket.');
-                        wsEvent('pollState', './systems/pollSystem.js', null, null);
+                        sendToSocket({pollState: true});
                     } else {
                         logError('Failed to authenticate with the socket.');
                     }

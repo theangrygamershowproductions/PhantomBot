@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
+ * Copyright (C) 2016-2023 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,8 +19,11 @@ package com.gmt2001.httpclient;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import org.json.JSONObject;
+import tv.phantombot.CaselessProperties;
+import tv.phantombot.PhantomBot;
 
 /**
  * The request parameters and response data from a HttpClient request
@@ -39,7 +42,7 @@ public final class HttpClientResponse {
     private final HttpHeaders requestHeaders;
     private final HttpHeaders responseHeaders;
     private final HttpResponseStatus responseCode;
-    private final HttpUrl url;
+    private final URI url;
 
     /**
      * Constructor
@@ -51,7 +54,7 @@ public final class HttpClientResponse {
      * @param response The response metadata object
      */
     @SuppressWarnings("UseSpecificCatch")
-    protected HttpClientResponse(Exception exception, String requestBody, byte[] responseBody, HttpUrl url,
+    protected HttpClientResponse(Exception exception, String requestBody, byte[] responseBody, URI url,
             reactor.netty.http.client.HttpClientResponse response) {
         this.exception = exception;
         this.isSuccess = response.status().code() > 0 && response.status().code() < 400;
@@ -76,6 +79,8 @@ public final class HttpClientResponse {
 
         this.json = jsonT;
         this.jsonException = jsonExceptionT;
+
+        this.debug();
     }
 
     /**
@@ -93,7 +98,7 @@ public final class HttpClientResponse {
      */
     @SuppressWarnings("UseSpecificCatch")
     protected HttpClientResponse(Exception exception, boolean isSuccess, HttpMethod method, String requestBody, byte[] responseBody,
-            HttpHeaders requestHeaders, HttpHeaders responseHeaders, HttpResponseStatus responseCode, HttpUrl url) {
+            HttpHeaders requestHeaders, HttpHeaders responseHeaders, HttpResponseStatus responseCode, URI url) {
         this.exception = exception;
         this.isSuccess = isSuccess;
         this.method = method;
@@ -129,6 +134,43 @@ public final class HttpClientResponse {
 
         this.json = jsonT;
         this.jsonException = jsonExceptionT;
+
+        this.debug();
+    }
+
+    private void debug() {
+        /**
+         * @botproperty httpclientdebug - If `true`, information about each HTTP request sent by HttpClient is sent to the debug log. Default `false`
+         * @botpropertycatsort httpclientdebug 800 900 Debug
+         */
+        if (PhantomBot.getEnableDebugging() && CaselessProperties.instance().getPropertyAsBoolean("httpclientdebug", false)) {
+            JSONObject jso = new JSONObject();
+            jso.put("isSuccess", this.isSuccess);
+            jso.put("method", this.method);
+            jso.put("url", this.url.toString());
+            jso.put("requestHeaders", this.requestHeaders);
+            jso.put("responseCode", this.responseCode.toString());
+            jso.put("responseHeaders", this.responseHeaders);
+            jso.put("responseBody", new String(this.responseBody, StandardCharsets.UTF_8));
+            String exs = com.gmt2001.Console.debug.getStackTrace(this.exception);
+            String[] ex;
+            if (exs != null) {
+                ex = exs.replace("\t", "    ").split("\r\n");
+            } else {
+                ex = null;
+            }
+            jso.put("exception", ex);
+            jso.put("json", this.json);
+            String jxs = com.gmt2001.Console.debug.getStackTrace(this.jsonException);
+            String[] jx;
+            if (jxs != null) {
+                jx = jxs.replace("\t", "    ").split("\r\n");
+            } else {
+                jx = null;
+            }
+            jso.put("jsonException", jx);
+            com.gmt2001.Console.debug.println(jso.toString(4));
+        }
     }
 
     /**
@@ -291,7 +333,7 @@ public final class HttpClientResponse {
      *
      * @return
      */
-    public HttpUrl url() {
+    public URI url() {
         return this.url;
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
+ * Copyright (C) 2016-2023 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,7 +33,7 @@ public class DiscordUserVoiceChannelJoinEvent extends DiscordUserVoiceChannelEve
     /**
      * Class constructor.
      *
-     * @param    user
+     * @param user
      * @param voicechannel
      */
     public DiscordUserVoiceChannelJoinEvent(User user, VoiceChannel voicechannel) {

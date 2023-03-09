@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
+ * Copyright (C) 2016-2023 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
 package com.gmt2001.datastore;
 
 import biz.source_code.miniConnectionPoolManager.MiniConnectionPoolManager;
+import com.gmt2001.ExecutorService;
 import com.gmt2001.PathValidator;
 import java.io.File;
 import java.io.IOException;
@@ -35,11 +36,11 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.commons.io.FileUtils;
 import org.sqlite.SQLiteConfig;
+import org.sqlite.SQLiteDataSource;
 import org.sqlite.SQLiteErrorCode;
 import org.sqlite.SQLiteException;
 import org.sqlite.javax.SQLiteConnectionPoolDataSource;
@@ -68,6 +69,36 @@ public final class SqliteStore extends DataStore {
         }
 
         return instance;
+    }
+
+    public static boolean isAvailable(String configStr) {
+        try {
+            Class.forName("org.sqlite.JDBC");
+        } catch (ClassNotFoundException ex) {
+            com.gmt2001.Console.debug.printStackTrace(ex);
+            return false;
+        }
+
+        SQLiteDataSource dataSource = new SQLiteDataSource();
+        dataSource.setUrl("jdbc:sqlite::memory:");
+        try ( Connection connection = dataSource.getConnection()) {
+            try ( Statement statement = connection.createStatement()) {
+                statement.execute("SELECT 1;");
+            }
+        } catch (UnsatisfiedLinkError | SQLException ex) {
+            com.gmt2001.Console.debug.printStackTrace(ex);
+            if (ex.getClass() == UnsatisfiedLinkError.class
+                || (ex.getCause() != null && ex.getCause().getMessage() != null && ex.getCause().getMessage().contains("No native library found"))) {
+                if (hasDatabase(configStr)) {
+                    com.gmt2001.Console.warn.println();
+                    com.gmt2001.Console.warn.println("SQLite database exists but unable to load SQLite library");
+                    com.gmt2001.Console.warn.println();
+                }
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private SqliteStore(String configStr) {
@@ -127,7 +158,7 @@ public final class SqliteStore extends DataStore {
             com.gmt2001.Console.err.printStackTrace(ex);
         }
 
-        Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(this::doMaintenance, 3, 3, TimeUnit.HOURS);
+        ExecutorService.scheduleAtFixedRate(this::doMaintenance, 3, 3, TimeUnit.HOURS);
     }
 
     private String sanitizeOrder(String order) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
+ * Copyright (C) 2016-2023 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -59,5 +59,15 @@ public class HttpNoAuthenticationHandler implements HttpAuthenticationHandler {
     @Override
     public void invalidateAuthorization(ChannelHandlerContext ctx, FullHttpRequest req) {
         throw new UnsupportedOperationException("Not supported by this authentication handler.");
+    }
+
+    @Override
+    public boolean isAuthorized(ChannelHandlerContext ctx, FullHttpRequest req) {
+        return true;
+    }
+
+    @Override
+    public boolean isAuthorized(String user, String pass) {
+        return true;
     }
 }

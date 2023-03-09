@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
+ * Copyright (C) 2016-2023 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,24 +16,30 @@
  */
 package tv.phantombot.twitch.api;
 
+import com.gmt2001.ExecutorService;
 import com.gmt2001.HttpRequest;
 import com.gmt2001.httpclient.HttpClient;
 import com.gmt2001.httpclient.HttpClientResponse;
-import com.gmt2001.httpclient.HttpUrl;
+import com.gmt2001.httpclient.URIUtil;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Executors;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import tv.phantombot.PhantomBot;
 
 /**
  * Handle Validate requests of the OAUTH2 token from Twitch.
  *
- * @author ScaniaTV, IllusionaryOne
+ * @author ScaniaTV, IllusionaryOne, gmt2001
  */
 public class TwitchValidate {
 
@@ -43,27 +49,24 @@ public class TwitchValidate {
     private static final String BASE_URL = "https://id.twitch.tv/oauth2/validate";
     private static final long REFRESH_INTERVAL = 3600000L;
     private static final long TIMEOUT_TIME = 5000L;
-    private final List<String> scopesC = new ArrayList<>();
+    @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
+    private final List<String> scopesC = new CopyOnWriteArrayList<>();
+    private final List<String> scopesMC = new CopyOnWriteArrayList<>();
     private String clientidC = "";
     private String loginC = "";
     private String useridC = "";
     public boolean validC = false;
     private Thread validateC = null;
     private ValidateRunnable validaterC = null;
-    private final List<String> scopesA = new ArrayList<>();
+    @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
+    private final List<String> scopesA = new CopyOnWriteArrayList<>();
+    private final List<String> scopesMA = new CopyOnWriteArrayList<>();
     private String clientidA = "";
     private String loginA = "";
     private String useridA = "";
     public boolean validA = false;
     private Thread validateA = null;
     private ValidateRunnable validaterA = null;
-    private final List<String> scopesT = new ArrayList<>();
-    private String clientidT = "";
-    private String loginT = "";
-    private String useridT = "";
-    public boolean validT = false;
-    private Thread validateT = null;
-    private ValidateRunnable validaterT = null;
 
     /**
      * This class constructor.
@@ -71,7 +74,7 @@ public class TwitchValidate {
     private TwitchValidate() {
         // Set the default exception handler thread.
         Thread.setDefaultUncaughtExceptionHandler(com.gmt2001.UncaughtExceptionHandler.instance());
-        Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(() -> this.doValidations(), REFRESH_INTERVAL, REFRESH_INTERVAL, TimeUnit.MILLISECONDS);
+        ExecutorService.scheduleAtFixedRate(() -> this.doValidations(), REFRESH_INTERVAL, REFRESH_INTERVAL, TimeUnit.MILLISECONDS);
     }
 
     private void doValidationA() {
@@ -96,21 +99,9 @@ public class TwitchValidate {
         }
     }
 
-    private void doValidationT() {
-        if (validaterT != null) {
-            if (validateT != null && validateT.isAlive()) {
-                validateT.interrupt();
-                validateT = null;
-            }
-
-            validaterT.run();
-        }
-    }
-
     private void doValidations() {
         this.doValidationA();
         this.doValidationC();
-        this.doValidationT();
     }
 
     /**
@@ -136,7 +127,7 @@ public class TwitchValidate {
         try {
             HttpHeaders headers = HttpClient.createHeaders(HttpMethod.GET, true);
             headers.add("Authorization", "OAuth " + oAuthToken);
-            HttpClientResponse response = HttpClient.request(HttpMethod.GET, HttpUrl.fromUri(BASE_URL), headers, null);
+            HttpClientResponse response = HttpClient.request(HttpMethod.GET, URIUtil.create(BASE_URL), headers, null);
 
             responseCode = response.responseCode().code();
 
@@ -161,7 +152,6 @@ public class TwitchValidate {
      */
     public void validateAPI(String oAuthToken, String type) {
         try {
-            scopesA.clear();
             validaterA = new ValidateRunnable(oAuthToken, type, 0);
             validateA = new Thread(validaterA, "tv.phantombot.twitch.api.TwitchValidate::ValidateRunnable");
             validateA.start();
@@ -172,21 +162,9 @@ public class TwitchValidate {
 
     public void validateChat(String oAuthToken, String type) {
         try {
-            scopesC.clear();
             validaterC = new ValidateRunnable(oAuthToken, type, 1);
             validateC = new Thread(validaterC, "tv.phantombot.twitch.api.TwitchValidate::ValidateRunnable");
             validateC.start();
-        } catch (Exception ex) {
-            com.gmt2001.Console.out.println("Unable to validate Twitch " + type + " OAUTH Token.");
-        }
-    }
-
-    public void validateApp(String oAuthToken, String type) {
-        try {
-            scopesT.clear();
-            validaterT = new ValidateRunnable(oAuthToken, type, 2);
-            validateT = new Thread(validaterT, "tv.phantombot.twitch.api.TwitchValidate::ValidateRunnable");
-            validateT.start();
         } catch (Exception ex) {
             com.gmt2001.Console.out.println("Unable to validate Twitch " + type + " OAUTH Token.");
         }
@@ -198,6 +176,10 @@ public class TwitchValidate {
 
     public List<String> getChatScopes() {
         return new ArrayList<>(scopesC);
+    }
+
+    public List<String> getMissingChatScopes() {
+        return new ArrayList<>(scopesMC);
     }
 
     public String getChatClientID() {
@@ -221,7 +203,7 @@ public class TwitchValidate {
             this.validateChat(token, "CHAT (oauth)");
         } else {
             this.validaterC.updateToken(token);
-            Executors.newSingleThreadExecutor().execute(() -> this.doValidationC());
+            ExecutorService.execute(() -> this.doValidationC());
         }
     }
 
@@ -231,6 +213,10 @@ public class TwitchValidate {
 
     public List<String> getAPIScopes() {
         return new ArrayList<>(scopesA);
+    }
+
+    public List<String> getMissingAPIScopes() {
+        return new ArrayList<>(scopesMA);
     }
 
     public String getAPIClientID() {
@@ -254,44 +240,11 @@ public class TwitchValidate {
             this.validateAPI(token, "API (apioauth)");
         } else {
             this.validaterA.updateToken(token);
-            Executors.newSingleThreadExecutor().execute(() -> this.doValidationA());
+            ExecutorService.execute(() -> this.doValidationA());
         }
     }
 
-    public boolean hasAppScope(String scope) {
-        return scopesT.contains(scope);
-    }
-
-    public List<String> getAppScopes() {
-        return new ArrayList<>(scopesT);
-    }
-
-    public String getAppClientID() {
-        return this.clientidT;
-    }
-
-    public String getAppLogin() {
-        return this.loginT;
-    }
-
-    public String getAppUserID() {
-        return this.useridT;
-    }
-
-    public boolean isAppValid() {
-        return this.validT;
-    }
-
-    public void updateAppToken(String token) {
-        if (this.validaterT == null) {
-            this.validateApp(token, "APP (EventSub)");
-        } else {
-            this.validaterT.updateToken(token);
-            Executors.newSingleThreadExecutor().execute(() -> this.doValidationT());
-        }
-    }
-
-    public void checkOAuthInconsistencies(String botName) {
+    public void checkOAuthInconsistencies(String channelName) {
         if (validateA != null && validateA.isAlive()) {
             try {
                 validateA.join(TIMEOUT_TIME);
@@ -308,22 +261,20 @@ public class TwitchValidate {
             }
         }
 
-        if (this.hasAPIScope("chat:edit") && !this.hasChatScope("chat:edit")) {
-            com.gmt2001.Console.warn.println("CHAT (oauth) does not have chat:edit but API (apioauth) does. OAuth tokens may be reversed");
-        } else if (!this.hasChatScope("chat:edit")) {
+        if (!this.hasChatScope("chat:edit")) {
             com.gmt2001.Console.warn.println("CHAT (oauth) does not have chat:edit. Bot may be unable to respond");
-        } else if (!this.hasChatScope("channel:moderate")) {
-            com.gmt2001.Console.warn.println("CHAT (oauth) does not have channel:moderate. Bot may be unable to purge/timeout/ban");
+        } else if (!this.hasChatScope("moderator:manage:banned_users")) {
+            com.gmt2001.Console.warn.println("Chat (oauth) does not have moderator:manage:banned_users. Bot may be unable to purge/timeout/ban");
         }
 
-        if (this.getAPILogin().equalsIgnoreCase(botName) && !this.getChatLogin().equalsIgnoreCase(botName)) {
-            com.gmt2001.Console.warn.println("CHAT (oauth) is not logged in as " + botName + " but API (apioauth) is. OAuth tokens may be reversed");
-        } else if (!this.getChatLogin().equalsIgnoreCase(botName)) {
-            com.gmt2001.Console.warn.println("CHAT (oauth) is not logged in as " + botName + ". OAuth token may be under the wrong login");
+        if (!this.getAPILogin().equalsIgnoreCase(channelName) && this.getChatLogin().equalsIgnoreCase(channelName)) {
+            com.gmt2001.Console.warn.println("API (apioauth) is not logged in as " + channelName + " but CHAT (oauth) is. OAuth tokens may be reversed");
+        } else if (!this.getAPILogin().equalsIgnoreCase(channelName)) {
+            com.gmt2001.Console.warn.println("API (apioauth) is not logged in as " + channelName + ". Some features may not work");
         }
     }
 
-    public boolean hasOAuthInconsistencies(String botName) {
+    public boolean hasOAuthInconsistencies(String channelName) {
         if (validateA != null && validateA.isAlive()) {
             try {
                 validateA.join(TIMEOUT_TIME);
@@ -340,8 +291,7 @@ public class TwitchValidate {
             }
         }
 
-        return this.hasAPIScope("chat:edit") && !this.hasChatScope("chat:edit") || !this.hasChatScope("chat:edit") || !this.hasChatScope("channel:moderate")
-                || this.getAPILogin().equalsIgnoreCase(botName) && !this.getChatLogin().equalsIgnoreCase(botName) || !this.getChatLogin().equalsIgnoreCase(botName);
+        return !this.hasChatScope("chat:edit") || !this.hasChatScope("moderator:manage:banned_users") || (!this.getAPILogin().equalsIgnoreCase(channelName) && this.getChatLogin().equalsIgnoreCase(channelName));
     }
 
     /**
@@ -353,6 +303,7 @@ public class TwitchValidate {
         private final String type;
         private final int tokenType;
         private boolean firstRun = true;
+        private boolean lastFail = false;
 
         public ValidateRunnable(String oAuthToken, String type, int tokenType) {
             this.oAuthToken = oAuthToken.replace("oauth:", "");
@@ -375,11 +326,18 @@ public class TwitchValidate {
                 com.gmt2001.Console.debug.println(type + requestObj.toString(4));
 
                 if (requestObj.has("message") && requestObj.getString("message").equals("invalid access token")) {
-                    com.gmt2001.Console.err.println("Twitch reports your " + type + " OAUTH token as invalid. It may have expired, "
-                            + "been disabled, or the Twitch API is experiencing issues.");
-                    com.gmt2001.Console.debug.println(requestObj.toString(4));
+                    if (lastFail || tokenType == 2) {
+                        com.gmt2001.Console.err.println("Twitch reports your " + type + " OAUTH token as invalid. It may have expired, "
+                                + "been disabled, or the Twitch API is experiencing issues.");
+                        com.gmt2001.Console.debug.println(requestObj.toString(4));
+                    } else {
+                        lastFail = true;
+                        PhantomBot.instance().getAuthFlow().refresh(tokenType == 1, tokenType == 0);
+                    }
                     return;
                 }
+
+                lastFail = false;
 
                 if (!requestObj.getBoolean("_success")) {
                     com.gmt2001.Console.err.println("Attempt to validate " + type + " OAUTH token failed.");
@@ -389,19 +347,28 @@ public class TwitchValidate {
 
                 if (requestObj.has("scopes")) {
                     JSONArray scopesa = requestObj.getJSONArray("scopes");
-                    (tokenType == 1 ? scopesC : (tokenType == 2 ? scopesT : scopesA)).clear();
+                    (tokenType == 1 ? scopesC : scopesA).clear();
                     scopesa.iterator().forEachRemaining(obj -> {
-                        (tokenType == 1 ? scopesC : (tokenType == 2 ? scopesT : scopesA)).add((String) obj);
+                        (tokenType == 1 ? scopesC : scopesA).add((String) obj);
                     });
+
+                    try {
+                        JSONObject scopes = new JSONObject(Files.readString(Paths.get("./web/oauth/scopes.json")));
+                        (tokenType == 1 ? scopesMC : scopesMA).clear();
+                        scopes.getJSONObject(tokenType == 1 ? "bot" : "broadcaster").keys().forEachRemaining(scope -> {
+                            if (!((tokenType == 1 ? scopesC : scopesA).contains(scope))) {
+                                (tokenType == 1 ? scopesMC : scopesMA).add(scope);
+                            }
+                        });
+                    } catch (JSONException | IOException e) {
+                        com.gmt2001.Console.err.logStackTrace(e);
+                    }
                 }
 
                 if (requestObj.has("client_id")) {
                     switch (tokenType) {
                         case 1:
                             clientidC = requestObj.getString("client_id");
-                            break;
-                        case 2:
-                            clientidT = requestObj.getString("client_id");
                             break;
                         default:
                             clientidA = requestObj.getString("client_id");
@@ -414,9 +381,6 @@ public class TwitchValidate {
                         case 1:
                             loginC = requestObj.getString("login");
                             break;
-                        case 2:
-                            loginT = requestObj.getString("login");
-                            break;
                         default:
                             loginA = requestObj.getString("login");
                             break;
@@ -428,9 +392,6 @@ public class TwitchValidate {
                         case 1:
                             useridC = requestObj.getString("user_id");
                             break;
-                        case 2:
-                            useridT = requestObj.getString("user_id");
-                            break;
                         default:
                             useridA = requestObj.getString("user_id");
                             break;
@@ -441,9 +402,6 @@ public class TwitchValidate {
                     switch (tokenType) {
                         case 1:
                             validC = true;
-                            break;
-                        case 2:
-                            validT = true;
                             break;
                         default:
                             validA = true;

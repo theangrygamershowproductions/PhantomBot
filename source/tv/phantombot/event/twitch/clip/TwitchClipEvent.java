@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
+ * Copyright (C) 2016-2023 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@ import org.json.JSONObject;
 import tv.phantombot.event.twitch.TwitchEvent;
 
 public class TwitchClipEvent extends TwitchEvent {
+
     private final String clipURL;
     private final String creator;
     private final String clipTitle;
@@ -28,9 +29,9 @@ public class TwitchClipEvent extends TwitchEvent {
     /**
      * Class constructor.
      *
-     * @param     clipURL
-     * @param     creator
-     * @param     clipTitle
+     * @param clipURL
+     * @param creator
+     * @param clipTitle
      * @param thumbnailObj
      */
     public TwitchClipEvent(String clipURL, String creator, String clipTitle, JSONObject thumbnailObj) {

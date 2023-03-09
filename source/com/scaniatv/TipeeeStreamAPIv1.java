@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
+ * Copyright (C) 2016-2023 phantombot.github.io/PhantomBot
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@ package com.scaniatv;
 import com.gmt2001.HttpRequest;
 import com.gmt2001.httpclient.HttpClient;
 import com.gmt2001.httpclient.HttpClientResponse;
-import com.gmt2001.httpclient.HttpUrl;
+import com.gmt2001.httpclient.URIUtil;
 import java.net.URISyntaxException;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -59,7 +59,7 @@ public class TipeeeStreamAPIv1 {
     @SuppressWarnings("UseSpecificCatch")
     private static JSONObject readJsonFromUrl(String endpoint) throws JSONException, URISyntaxException {
         JSONObject jsonResult = new JSONObject("{}");
-        HttpClientResponse response = HttpClient.get(HttpUrl.fromUri(endpoint));
+        HttpClientResponse response = HttpClient.get(URIUtil.create(endpoint));
 
         if (response.hasJson()) {
             jsonResult = response.json();

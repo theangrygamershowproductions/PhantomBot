@@ -3,7 +3,7 @@
 
     <!--
 
-    Copyright (C) 2016-2022 phantombot.github.io/PhantomBot
+    Copyright (C) 2016-2023 phantombot.github.io/PhantomBot
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -25,11 +25,11 @@
 
     <property environment="env" />
     <!-- Please see this for version numbers: https://semver.org/ -->
-    <property name="version" value="3.6.3" />
-    <!-- Please see this for version numbers: https://semver.org/ -->
-    <property name="webpanel.version" value="1.6.4" />
+    <property name="version" value="custom" />
+    <property name="fallback.revision" value="unknown" />
     <property name="src" location="source" />
     <property name="reference" location="lib" />
+    <property name="reference.extra" location="lib.extra" />
     <property name="build" location="build" />
     <property name="classes" location="${build}/classes" />
     <property name="dist" location="dist" />
@@ -38,6 +38,8 @@
     <property name="build.dir" location="${dist}/build" />
     <property name="res.dir" location="${build.dir}" />
     <property name="lib.dir" location="${build.dir}/lib" />
+    <property name="lib.extra.dir" location="${build.dir}/lib.extra" />
+    <property name="java.source.level" value="11"/>
     <!-- Apache Ivy properties -->
     <property name="ivy.install.version" value="2.5.0"/>
     <condition property="ivy.home" value="${env.IVY_HOME}">
@@ -46,6 +48,7 @@
     <property name="ivy.home" value="${user.home}/.ant"/>
     <property name="ivy.jar.dir" value="${ivy.home}/lib"/>
     <property name="ivy.jar.file" value="${ivy.jar.dir}/ivy.jar"/>
+    <property name="ivy.localfs.dir" location="localfs" />
 
     <tstamp>
         <format property="NOW" pattern="MMM dd yyyy HH:mm:ss zzz" timezone="GMT" />
@@ -96,7 +99,6 @@
         Ivy is in at least one of Ant's lib dir or the local lib dir. -->
         <path id="ivy.lib.path">
             <fileset dir="${ivy.jar.dir}" includes="*.jar"/>
-
         </path>
         <taskdef resource="org/apache/ivy/ant/antlib.xml"
                  uri="antlib:org.apache.ivy.ant" classpathref="ivy.lib.path"/>
@@ -111,7 +113,8 @@
 
     <target depends="init-ivy" name="ivy-retrieve">
         <ivy:settings file="ivysettings.xml"/>
-        <ivy:retrieve sync="true"/>
+        <ivy:retrieve sync="true" conf="default"/>
+        <ivy:retrieve sync="true" conf="lib.extra" pattern="${reference.extra}/[artifact]-[revision].[ext]"/>
         <ivy:report graph="false" todir="resources/licenses/"/>
         <exec executable="git" outputproperty="git.ivychange" failifexecutionfails="false" errorproperty="">
             <arg value="diff"/>
@@ -121,6 +124,7 @@
         <exec executable="git" failifexecutionfails="false" errorproperty="" if:blank="${git.ivychange}">
             <arg value="checkout"/>
             <arg value="resources/licenses/tv.phantombot-phantombot-default.html"/>
+            <arg value="resources/licenses/tv.phantombot-phantombot-lib.extra.html"/>
         </exec>
     </target>
 
@@ -134,9 +138,14 @@
         <ivy:checkdepsupdate/>
     </target>
 
+    <target depends="init-ivy" name="ivy-show-tree">
+        <ivy:dependencytree/>
+    </target>
+
     <target name="clearlib">
         <delete>
             <fileset dir="${reference}" includes="**/*.jar" />
+            <fileset dir="${reference.extra}" includes="**/*.jar" />
         </delete>
     </target>
 
@@ -168,7 +177,7 @@
             <arg value="--short"/>
             <arg value="HEAD"/>
         </exec>
-        <condition property="repository.version" value="${git.revision}" else="unknown">
+        <condition property="repository.version" value="${git.revision}" else="${fallback.revision}">
             <and>
                 <isset property="git.revision"/>
                 <length string="${git.revision}" trim="yes" length="0" when="greater"/>
@@ -178,7 +187,6 @@
 
     <target depends="init,ivy-retrieve,classpaths,git.revision" name="pre.compile">
         <echo>${ant.project.name} Version ${version} (${repository.version}) (${build_type})</echo>
-        <echo>${ant.project.name} Control Panel Version ${webpanel.version}</echo>
         <replaceregexp
             file="source/tv/phantombot/RepoVersion.java"
             match="repoVersion = &quot;(.*)&quot;;"
@@ -191,10 +199,6 @@
             file="source/tv/phantombot/RepoVersion.java"
             match="phantomBotVersion = &quot;(.*)&quot;;"
             replace="phantomBotVersion = &quot;${version}&quot;;" />
-        <replaceregexp
-            file="source/tv/phantombot/RepoVersion.java"
-            match="panelVersion = &quot;(.*)&quot;;"
-            replace="panelVersion = &quot;${webpanel.version}&quot;;" />
         <replaceregexp
             file="source/tv/phantombot/RepoVersion.java"
             match="isDocker = false;"
@@ -211,7 +215,7 @@
 
     <target depends="pre.compile" name="compile.src">
         <echo>Compiling with Java Version ${ant.java.version} (${java.version})</echo>
-        <javac target="11" source="11" debug="on" destdir="${classes}" srcdir="${src}" includeantruntime="false" >
+        <javac target="${java.source.level}" source="${java.source.level}" debug="on" destdir="${classes}" srcdir="${src}" includeantruntime="false" >
             <compilerarg value="-Xlint:unchecked" />
             <compilerarg value="-Xlint:-options" />
             <compilerarg value="-XDenableSunApiLintControl" />
@@ -227,7 +231,7 @@
     </target>
 
     <target depends="clean.build.test" name="compile.src.test">
-        <javac target="11" source="11" debug="on" destdir="${classes}" srcdir="${src}" includeantruntime="false" >
+        <javac target="${java.source.level}" source="${java.source.level}" debug="on" destdir="${classes}" srcdir="${src}" includeantruntime="false" >
             <compilerarg value="-Xlint:all" />
             <compilerarg value="-Xlint:-options" />
             <compilerarg value="-XDenableSunApiLintControl" />
@@ -249,10 +253,6 @@
             file="source/tv/phantombot/RepoVersion.java"
             match="phantomBotVersion = &quot;(.*)&quot;;"
             replace="phantomBotVersion = &quot;@phantombot.version@&quot;;" />
-        <replaceregexp
-            file="source/tv/phantombot/RepoVersion.java"
-            match="panelVersion = &quot;(.*)&quot;;"
-            replace="panelVersion = &quot;@webpanel.version@&quot;;" />
         <replaceregexp
             file="source/tv/phantombot/RepoVersion.java"
             match="isDocker = (.*);"
@@ -313,6 +313,14 @@
                 <exclude name="*javadoc.jar"/>
             </fileset>
         </copy>
+        <mkdir dir="${lib.extra.dir}" />
+        <copy todir="${lib.extra.dir}">
+            <fileset dir="${reference.extra}">
+                <include name="*.jar" />
+                <exclude name="*sources.jar"/>
+                <exclude name="*javadoc.jar"/>
+            </fileset>
+        </copy>
         <echo level="info" message="staging resources folder into build dir." />
         <copy todir="${res.dir}">
             <fileset dir="./resources" />
@@ -321,15 +329,13 @@
         <copy todir="${res.dir}/scripts">
             <fileset dir="./javascript-source" />
         </copy>
-        <replaceregexp
-            file="${build.dir}/web/panel/js/utils/helpers.js"
-            match="helpers\.PANEL_VERSION = &quot;(.*)&quot;;"
-            replace="helpers\.PANEL_VERSION = &quot;${webpanel.version}&quot;;" />
         <echo level="info" message="staging files into distribution folder." />
         <move todir="${version.folder}">
             <fileset dir="${build.dir}" />
         </move>
     </target>
+
+    <target depends="clean-no-post,jar" name="clean-jar"></target>
 
     <target depends="compile.src.test,post.compile" name="test"/>
 
@@ -349,12 +355,50 @@
         </zip>
     </target>
 
-    <target name="clean" depends="git.revision,post.compile">
+    <target name="clean-no-post" depends="git.revision">
+        <delete dir="${build}" />
+    </target>
+
+    <target name="clean" depends="clean-no-post,post.compile">
         <delete dir="${build}" />
     </target>
 
     <target name="distclean" depends="clean">
         <delete dir="${dist}" />
+    </target>
+
+    <target name="javadoc">
+        <javadoc destdir="${dist}/javadoc"
+            author="true"
+            sourcepath="source"
+            useexternalfile="true"
+            source="${java.source.level}"
+            windowtitle="PhantomBot JavaDoc"
+            additionalparam="--allow-script-in-comments"
+            docencoding="utf8"
+            charset="utf8">
+            <classpath>
+                <fileset dir="${reference}">
+                    <include name="**/*.jar"/>
+                </fileset>
+            </classpath>
+            <link href="https://docs.oracle.com/en/java/javase/11/docs/api/" />
+            <link href="https://javadoc.io/doc/com.discord4j/discord4j-common/latest/" />
+            <link href="https://javadoc.io/doc/com.discord4j/discord4j-core/latest/" />
+            <link href="https://javadoc.io/doc/com.discord4j/discord4j-rest/latest/" />
+            <link href="https://stleary.github.io/JSON-java/" />
+            <link href="https://netty.io/4.1/api/" />
+            <link href="https://projectreactor.io/docs/core/release/api/" />
+            <link href="https://projectreactor.io/docs/netty/release/api/" />
+            <doctitle><![CDATA[<h1>PhantomBot</h1>]]></doctitle>
+            <header><![CDATA[
+                <a id="javadoc-stable" href="/javadoc-stable/index.html">Stable</a>&nbsp;|&nbsp;<a id="javadoc-nightly" href="/javadoc/index.html">Nightly</a>
+                <script>
+                document.getElementById('javadoc-' + (window.location.pathname.includes('javadoc-stable') ? 'stable' : 'nightly')).style.fontWeight = 'bold';
+                </script>
+            ]]></header>
+            <bottom><![CDATA[<i>Copyright &copy; 2016-2023 phantombot.github.io/PhantomBot</i>]]></bottom>
+        </javadoc>
     </target>
 
 </project>

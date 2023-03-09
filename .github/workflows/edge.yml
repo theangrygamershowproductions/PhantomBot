@@ -24,6 +24,7 @@ jobs:
     name: Docker test on ubuntu-latest with JDK 11
     runs-on: ubuntu-latest
     needs: buildtest
+    timeout-minutes: 5
     services:
       registry:
         image: registry:2
@@ -42,12 +43,13 @@ jobs:
         version: latest
         driver-opts: network=host
     - name: Build Docker
-      uses: docker/build-push-action@v3
+      uses: docker/build-push-action@v4
       with:
         context: .
         file: ./Dockerfile
         platforms: linux/amd64
         push: true
+        cache-from: type=gha,scope=master
         build-args: |
           PROJECT_VERSION=0.0.0
           ANT_ARGS=-Dbuildtype=test -Dversion=0.0.0
@@ -70,7 +72,7 @@ jobs:
       run: sudo apt-get install ant
     - name: Set up environment variables
       id: build_env
-      run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF##*/})"
+      run: echo "branch=${GITHUB_REF##*/}" >> $GITHUB_OUTPUT
     - name: Prep Ant script
       env:
         BRANCH: ${{ steps.build_env.outputs.branch }}
@@ -84,7 +86,8 @@ jobs:
         BUILDTYPE: ${{ format('{0}_build', steps.build_env.outputs.branch) }}
         ROLLBAR_TOKEN: ${{ secrets.ROLLBAR_TOKEN }}
         ROLLBAR_ENDPOINT: ${{ secrets.ROLLBAR_ENDPOINT }}
-      run: ant -noinput -Dbuildtype=$BUILDTYPE -Drollbar_token=$ROLLBAR_TOKEN -Drollbar_endpoint=$ROLLBAR_ENDPOINT -buildfile build.xml dist
+        BRANCH: ${{ steps.build_env.outputs.branch }}
+      run: ant -noinput -Dversion=$BRANCH -Dbuildtype=$BUILDTYPE -Drollbar_token=$ROLLBAR_TOKEN -Drollbar_endpoint=$ROLLBAR_ENDPOINT -buildfile build.xml dist
     - name: Prep Artifacts
       env:
         FOLDERFULL: ${{ format('PhantomBot-{0}', steps.build_env.outputs.branch) }}

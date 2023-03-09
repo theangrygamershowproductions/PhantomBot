@@ -437,6 +437,7 @@ sun/nio/fs/UnixNativeDispatcher
 sun/nio/fs/UnixNativeDispatcher$1
 java/lang/ClassLoader$2
 java/lang/ClassLoader$NativeLibrary
+java/lang/ClassLoaderHelper
 java/util/ArrayDeque$DeqIterator
 java/util/concurrent/ConcurrentHashMap$ValuesView
 java/util/concurrent/ConcurrentHashMap$ValueIterator
